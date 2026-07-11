@@ -48,6 +48,9 @@
                         <i class="fa-solid fa-cloud text-teal-300" id="statusIcon"></i>
                         <span id="connectionStatus" class="hidden sm:inline">Menunggu URL...</span>
                     </div>
+                    <button id="refreshDataBtn" class="bg-teal-700 hover:bg-teal-800 text-white w-9 h-9 rounded-full transition flex items-center justify-center shadow-sm disabled:opacity-50" title="Refresh Data dari Server">
+                        <i class="fa-solid fa-arrows-rotate" id="refreshIcon"></i>
+                    </button>
                     <button id="openSettingsBtn" class="bg-teal-700 hover:bg-teal-800 text-white w-9 h-9 rounded-full transition flex items-center justify-center shadow-sm" title="Pengaturan Koneksi">
                         <i class="fa-solid fa-gear"></i>
                     </button>
@@ -270,8 +273,15 @@
                 <button onclick="closeSelectDonorModal()" class="text-slate-400 hover:text-slate-700 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
-            <div class="p-3 bg-white border-b border-slate-100 flex gap-3 items-center">
-                <input type="text" id="searchModalDonor" placeholder="Cari nama dari Master Data..." class="bg-slate-50 border border-slate-300 text-sm rounded p-2 outline-none flex-grow">
+            <div class="p-3 bg-white border-b border-slate-100 flex flex-wrap gap-3 items-center">
+                <input type="text" id="searchModalDonor" placeholder="Cari nama dari Master Data..." class="bg-slate-50 border border-slate-300 text-sm rounded p-2 outline-none flex-grow min-w-[200px]">
+                
+                <select id="filterModalStatus" onchange="renderModalDonorList()" class="bg-slate-50 border border-slate-300 text-sm rounded p-2 outline-none">
+                    <option value="all">Semua Donatur</option>
+                    <option value="unblasted">Belum Pernah di-Blast</option>
+                    <option value="noreply">Belum Ada Balasan</option>
+                </select>
+
                 <label class="flex items-center space-x-2 text-sm font-medium text-slate-700 cursor-pointer bg-slate-100 px-3 py-2 rounded hover:bg-slate-200">
                     <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
                     <span>Pilih Semua filter</span>
@@ -343,6 +353,9 @@
         // --- ELEMENTS ---
         const connStatus = document.getElementById('connectionStatus');
         const statIcon = document.getElementById('statusIcon');
+        
+        const refreshDataBtn = document.getElementById('refreshDataBtn');
+        const refreshIcon = document.getElementById('refreshIcon');
         
         // --- TOAST UI ---
         function showToast(msg, type = 'success') {
@@ -761,9 +774,38 @@
 
         function renderModalDonorList() {
             const search = document.getElementById('searchModalDonor').value.toLowerCase();
+            const filterStatus = document.getElementById('filterModalStatus').value;
             const listContainer = document.getElementById('modalDonorList');
             
-            const filtered = state.donors.filter(d => String(d.nama).toLowerCase().includes(search) || String(d.id_donatur).toLowerCase().includes(search));
+            // Reset "Pilih Semua" saat memfilter agar tidak membingungkan
+            document.getElementById('selectAllCheckbox').checked = false;
+            
+            const filtered = state.donors.filter(d => {
+                // 1. Filter Text
+                const matchSearch = String(d.nama).toLowerCase().includes(search) || String(d.id_donatur).toLowerCase().includes(search);
+                if (!matchSearch) return false;
+
+                // 2. Filter Berdasarkan Aktivitas Riwayat (Lanjutan)
+                if (filterStatus !== 'all') {
+                    // Cari semua riwayat donatur ini di seluruh campaign
+                    const history = state.details.filter(det => det.id_doc === d.id_doc);
+                    
+                    if (filterStatus === 'unblasted') {
+                        // Jika ada 1 saja record yang punya last_sent, berarti dia PERNAH di blast.
+                        // Kita hanya mencari yang BELUM PERNAH (everBlasted = false)
+                        const everBlasted = history.some(det => det.last_sent && det.last_sent.trim() !== "");
+                        if (everBlasted) return false;
+                    } 
+                    else if (filterStatus === 'noreply') {
+                        // Jika ada 1 saja record yang punya balasan, berarti dia PERNAH membalas.
+                        // Kita hanya mencari yang BELUM PERNAH MEMBALAS SAMA SEKALI
+                        const everReplied = history.some(det => det.balasan && det.balasan.trim() !== "");
+                        if (everReplied) return false;
+                    }
+                }
+                
+                return true;
+            });
             
             let html = '';
             filtered.forEach(d => {
@@ -777,6 +819,11 @@
                     </div>
                 </label>`;
             });
+            
+            if (filtered.length === 0) {
+                html = `<div class="col-span-full p-6 text-center text-slate-400">Tidak ada donatur yang sesuai dengan filter ini.</div>`;
+            }
+            
             listContainer.innerHTML = html;
             updateModalCountText();
         }
@@ -824,6 +871,21 @@
         document.getElementById('openSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('hidden'));
         document.getElementById('statusBadge').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('hidden'));
         document.getElementById('closeSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.add('hidden'));
+
+        refreshDataBtn.addEventListener('click', async () => {
+            if (!gasUrl || !sheetId) return showToast("Hubungkan ke Google Script terlebih dahulu", "error");
+            
+            // Animasi putar (loading)
+            refreshIcon.classList.add('fa-spin');
+            refreshDataBtn.disabled = true;
+            
+            await loadData();
+            
+            // Hapus animasi putar setelah selesai
+            refreshIcon.classList.remove('fa-spin');
+            refreshDataBtn.disabled = false;
+            showToast("Data berhasil disegarkan dari server!");
+        });
 
         document.getElementById('saveGasUrlBtn').addEventListener('click', async () => {
             const url = document.getElementById('gasUrlInput').value.trim().replace(/(\r\n|\n|\r)/gm, "");
