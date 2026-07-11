@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM WhatsApp Blast Donatur</title>
+    
+    <!-- PWA Meta Tags (BARU) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0d9488">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Custom scrollbar for table */
+        .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Toast animation */
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-teal-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa-solid fa-hands-holding-circle text-2xl"></i>
+                    <span class="font-bold text-xl tracking-wide">CRM Donatur</span>
+                </div>
+                <div class="text-sm font-medium bg-teal-700 px-3 py-1.5 rounded-full flex items-center space-x-2">
+                    <i class="fa-solid fa-cloud text-teal-300" id="statusIcon"></i>
+                    <span id="connectionStatus">Menunggu URL...</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Controls & Templates -->
+        <div class="space-y-6 lg:col-span-1">
+            
+            <!-- Google Script Setup Section -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-blue-500">
+                <h2 class="text-lg font-bold mb-3 flex items-center text-slate-700">
+                    <i class="fa-brands fa-google mr-2 text-blue-500"></i> Koneksi Spreadsheet
+                </h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">1. URL Web App (GAS):</label>
+                        <input type="url" id="gasUrlInput" class="w-full border-slate-300 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Paste URL Web App (Script) di sini...">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-500 block mb-1">2. Link Google Sheets (Database):</label>
+                        <input type="text" id="sheetUrlInput" class="w-full border-slate-300 border rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="Paste Link Spreadsheet Anda di sini...">
+                    </div>
+                    <button id="saveGasUrlBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center mt-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-plug mr-2"></i> Hubungkan ke Sheet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Template Section -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
+                    <i class="fa-regular fa-message mr-2 text-teal-600"></i> Template Pesan
+                </h2>
+                <div class="mb-3 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <p class="font-semibold text-slate-600 mb-1">Gunakan Variabel:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{id}</span>
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{sapaan}</span>
+                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{nama}</span>
+                    </div>
+                </div>
+                <textarea id="templateInput" rows="6" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition" placeholder="Contoh: Assalamu'alaikum {sapaan} {nama}, terima kasih atas donasinya. (ID: {id})"></textarea>
+                <button id="saveTemplateBtn" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-regular fa-floppy-disk mr-2"></i> Simpan Template
+                </button>
+            </div>
+
+            <!-- Import Section -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
+                    <i class="fa-solid fa-file-import mr-2 text-teal-600"></i> Import Data
+                </h2>
+                <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                    Copy data dari Excel/Spreadsheet dan paste di bawah ini, atau ketik dengan pemisah koma (,).<br>
+                    <strong class="text-slate-700">Format:</strong> ID, Sapaan, Nama, No WhatsApp
+                </p>
+                <textarea id="importInput" rows="4" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-mono text-xs whitespace-pre" placeholder="MA 11, Hamba, Allah, 6285345338077"></textarea>
+                <button id="importBtn" class="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-plus mr-2"></i> Tambahkan Data
+                </button>
+            </div>
+            
+        </div>
+
+        <!-- Right Column: Table / Spreadsheet View -->
+        <div class="lg:col-span-2">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full min-h-[500px]">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-bold text-slate-700 flex items-center">
+                        <i class="fa-solid fa-table-list mr-2 text-teal-600"></i> Database Donatur
+                    </h2>
+                    <span class="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200" id="totalDonatur">
+                        Total: 0
+                    </span>
+                </div>
+                
+                <!-- Table -->
+                <div class="overflow-x-auto table-container flex-grow">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-sm uppercase tracking-wider">
+                                <th class="p-4 font-semibold border-b">ID</th>
+                                <th class="p-4 font-semibold border-b">Sapaan</th>
+                                <th class="p-4 font-semibold border-b">Nama</th>
+                                <th class="p-4 font-semibold border-b">WhatsApp</th>
+                                <th class="p-4 font-semibold border-b text-center">Status</th>
+                                <th class="p-4 font-semibold border-b text-center">Respon</th>
+                                <th class="p-4 font-semibold border-b text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="donorsTableBody" class="text-sm divide-y divide-slate-100">
+                            <!-- Rows will be populated here by JS -->
+                            <tr>
+                                <td colspan="7" class="p-8 text-center text-slate-400">
+                                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                                    <p>Memuat data...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="p-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
+                    <span><i class="fa-solid fa-circle-info mr-1"></i> Data tersimpan aman di cloud.</span>
+                    <button id="clearAllBtn" class="text-red-500 hover:text-red-700 font-medium transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua Data
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <!-- Application Logic (Google Script Integration) -->
+    <script>
+        // State Variables
+        let donorsList = [];
+        let messageTemplate = "";
+        let responOptions = []; 
+        let gasUrl = localStorage.getItem('crm_gas_url') || "";
+        let sheetId = localStorage.getItem('crm_sheet_id') || "";
+
+        // DOM Elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusIcon = document.getElementById('statusIcon');
+        const gasUrlInput = document.getElementById('gasUrlInput');
+        const sheetUrlInput = document.getElementById('sheetUrlInput');
+        const saveGasUrlBtn = document.getElementById('saveGasUrlBtn');
+        const templateInput = document.getElementById('templateInput');
+        const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+        const importInput = document.getElementById('importInput');
+        const importBtn = document.getElementById('importBtn');
+        const donorsTableBody = document.getElementById('donorsTableBody');
+        const totalDonatur = document.getElementById('totalDonatur');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // --- Utility: Toast Notifications ---
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>' : 
+                         (type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg"></i>' : 
+                         '<i class="fa-solid fa-info-circle text-blue-500 text-lg"></i>');
+            
+            toast.className = `toast-enter flex items-center bg-white shadow-lg rounded-lg border-l-4 p-4 min-w-[250px] ${
+                type === 'success' ? 'border-green-500' : (type === 'error' ? 'border-red-500' : 'border-blue-500')
+            }`;
+            
+            toast.innerHTML = `
+                <div class="mr-3">${icon}</div>
+                <div class="flex-grow text-sm font-medium text-slate-700">${message}</div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.replace('toast-enter', 'toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000); 
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // --- Core Fetch Logic to GAS with Auto-Retry ---
+        async function fetchGAS(action, payload = {}, retries = 1) {
+            if (!gasUrl) throw new Error("URL_MISSING");
+            if (!sheetId) throw new Error("SHEET_ID_MISSING");
+            
+            payload.sheet_id = sheetId;
+
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    body: JSON.stringify({ action, payload }),
+                    redirect: 'follow'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP_ERROR_${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.status === 'error') {
+                    throw new Error(`GAS_ERROR: ${result.message}`);
+                }
+                
+                return result.data;
+            } catch (error) {
+                console.warn(`Kesalahan fetch terdeteksi. Sisa percobaan (retry): ${retries}`);
+                if (retries > 0) {
+                    // Tunggu 1.5 detik lalu coba lagi secara otomatis
+                    await new Promise(res => setTimeout(res, 1500));
+                    return fetchGAS(action, payload, retries - 1);
+                }
+                console.error("Fetch Error Detail:", error);
+                throw error;
+            }
+        }
+
+        // --- Init & Load Data ---
+        async function loadData() {
+            if (!gasUrl || !sheetId) {
+                connectionStatus.innerText = "Belum Terhubung";
+                statusIcon.className = "fa-solid fa-triangle-exclamation text-yellow-300";
+                return;
+            }
+            
+            gasUrlInput.value = gasUrl;
+            sheetUrlInput.value = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+            
+            connectionStatus.innerText = "Memuat data...";
+            statusIcon.className = "fa-solid fa-spinner fa-spin text-teal-300";
+            
+            try {
+                const data = await fetchGAS('getDonors');
+                donorsList = data.donors || [];
+                messageTemplate = data.template || "";
+                responOptions = data.responOptions || ["Menunggu", "Positif", "Sudah Transfer", "Menolak", "Nomor Tidak Valid"];
+                templateInput.value = messageTemplate;
+                
+                connectionStatus.innerText = "Terhubung (Sheet)";
+                statusIcon.className = "fa-solid fa-check-circle text-teal-300";
+                renderTable();
+            } catch (error) {
+                connectionStatus.innerText = "Gagal Konek";
+                statusIcon.className = "fa-solid fa-xmark-circle text-red-300";
+                
+                let userFriendlyError = "Gagal mengambil data.";
+                let errorMessageStr = String(error.message);
+
+                if (errorMessageStr.includes("getSheetByName") || errorMessageStr.includes("getActiveSpreadsheet")) {
+                    userFriendlyError = `<b>🚨 Script GAS Kedaluwarsa / Belum Diperbarui!</b><br>Sistem masih membaca versi script lama yang rusak. <br><br><b>SOLUSI:</b><br>1. Buka kembali editor Code.gs Anda<br>2. Salin KESELURUHAN kode backend baru dan paste ke sana.<br>3. Klik 'Terapkan (Deploy)' > 'Kelola Deployment'<br>4. Edit (ikon pensil) > Ubah versi ke <b>'Versi Baru'</b><br>5. Klik 'Terapkan'.`;
+                } else if (errorMessageStr.includes("Failed to fetch") || errorMessageStr.includes("NetworkError")) {
+                    userFriendlyError = `<b>🚨 Gagal menghubungi Server! (Failed to fetch)</b><br><br><b>PENYEBAB:</b><br>1. URL Web App salah (ada spasi atau kurang lengkap).<br>2. Saat Deploy, akses tidak diatur ke <b>"Siapa Saja (Anyone)"</b>.<br>3. Terjadi blokir CORS di browser Anda.`;
+                } else if (errorMessageStr.includes("SHEET_ID_MISSING")) {
+                    userFriendlyError = `Link Spreadsheet belum diisi dengan benar.`;
+                } else {
+                    userFriendlyError = `Terjadi kesalahan saat koneksi: <br><span class="text-xs text-red-400">${errorMessageStr}</span>`;
+                }
+
+                showToast("Koneksi gagal. Lihat tabel untuk solusi detail.", "error");
+                donorsTableBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-lg">${userFriendlyError}</td></tr>`;
+            }
+        }
+
+        // --- Save Google Script URL & Sheet ID ---
+        saveGasUrlBtn.addEventListener('click', async () => {
+            const url = gasUrlInput.value.trim().replace(/(\r\n|\n|\r)/gm, "");
+            let sheetLink = sheetUrlInput.value.trim().replace(/(\r\n|\n|\r)/gm, "");
+            
+            let extractedId = "";
+            if (sheetLink.includes('/d/')) {
+                extractedId = sheetLink.split('/d/')[1].split('/')[0];
+            } else if (sheetLink.length > 25 && !sheetLink.includes('http')) {
+                extractedId = sheetLink;
+            }
+            
+            if(!url.startsWith('https://script.google.com/')) {
+                showToast("URL Web App salah! Harus berawalan https://script.google.com/...", "error");
+                return;
+            }
+            if(!extractedId) {
+                showToast("Link Google Sheets tidak valid.", "error");
+                return;
+            }
+
+            gasUrl = url;
+            sheetId = extractedId;
+            localStorage.setItem('crm_gas_url', url);
+            localStorage.setItem('crm_sheet_id', sheetId);
+            
+            // UI Update: Disable button while loading
+            const originalBtnHTML = saveGasUrlBtn.innerHTML;
+            saveGasUrlBtn.disabled = true;
+            saveGasUrlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghubungkan...';
+            
+            await loadData();
+            
+            // Restore button
+            saveGasUrlBtn.disabled = false;
+            saveGasUrlBtn.innerHTML = originalBtnHTML;
+            if (connectionStatus.innerText.includes("Terhubung")) {
+                showToast("Berhasil tersinkronisasi dengan Spreadsheet!");
+            }
+        });
+
+        // --- Render Table ---
+        function renderTable() {
+            totalDonatur.innerText = `Total: ${donorsList.length}`;
+            
+            if (donorsList.length === 0) {
+                donorsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-12 text-center text-slate-500">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="bg-slate-100 p-4 rounded-full mb-3">
+                                    <i class="fa-solid fa-folder-open text-3xl text-slate-300"></i>
+                                </div>
+                                <p class="text-base font-medium">Belum ada data donatur.</p>
+                                <p class="text-sm mt-1 text-slate-400">Silakan import data melalui panel di sebelah kiri.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            donorsTableBody.innerHTML = '';
+            
+            donorsList.forEach((donor) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition duration-150 group";
+                
+                let statusHtml = `<span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full whitespace-nowrap"><i class="fa-regular fa-clock mr-1"></i>Belum</span>`;
+                if (donor.last_sent) {
+                    statusHtml = `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>Terkirim</span>`;
+                }
+                
+                const currentRespon = donor.respon || "";
+
+                let optionsHtml = `<option value="" ${currentRespon === '' ? 'selected' : ''}>- Pilih -</option>`;
+                responOptions.forEach(opt => {
+                    optionsHtml += `<option value="${escapeHTML(opt)}" ${currentRespon === opt ? 'selected' : ''}>${escapeHTML(opt)}</option>`;
+                });
+
+                tr.innerHTML = `
+                    <td class="p-4 font-medium text-slate-700 whitespace-nowrap">${escapeHTML(donor.id_donatur)}</td>
+                    <td class="p-4 text-slate-600">${escapeHTML(donor.sapaan)}</td>
+                    <td class="p-4 text-slate-800 font-medium">${escapeHTML(donor.nama)}</td>
+                    <td class="p-4 text-slate-600 font-mono text-sm">${escapeHTML(donor.whatsapp)}</td>
+                    <td class="p-4 text-center">${statusHtml}</td>
+                    <td class="p-4 text-center">
+                        <select onchange="window.updateRespon('${donor.id_doc}', this.value)" class="text-xs border border-slate-300 rounded p-1.5 text-slate-600 focus:ring-teal-500 focus:border-teal-500 outline-none cursor-pointer bg-white w-full">
+                            ${optionsHtml}
+                        </select>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <button onclick="window.sendWhatsApp('${donor.id_doc}')" class="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition shadow-sm" title="Kirim WhatsApp">
+                                <i class="fa-brands fa-whatsapp text-lg"></i>
+                            </button>
+                            <button onclick="window.deleteDonor('${donor.id_doc}')" class="bg-red-50 text-red-500 hover:bg-red-500 hover:text-white p-2 rounded-lg transition opacity-0 group-hover:opacity-100" title="Hapus Data">
+                                <i class="fa-regular fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                donorsTableBody.appendChild(tr);
+            });
+        }
+
+        // --- Save Template ---
+        saveTemplateBtn.addEventListener('click', async () => {
+            if (!gasUrl) return showToast("Hubungkan ke Google Script dulu", "error");
+            
+            const newTemplate = templateInput.value.trim();
+            if (!newTemplate) return showToast("Template tidak boleh kosong", "error");
+
+            messageTemplate = newTemplate; 
+            
+            const originalBtn = saveTemplateBtn.innerHTML;
+            saveTemplateBtn.disabled = true;
+            saveTemplateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
+            
+            try {
+                await fetchGAS('saveTemplate', { template: newTemplate });
+                showToast("Template berhasil disimpan ke Sheet!");
+            } catch (error) {
+                showToast("Gagal menyimpan template", "error");
+            } finally {
+                saveTemplateBtn.disabled = false;
+                saveTemplateBtn.innerHTML = originalBtn;
+            }
+        });
+
+        // --- Parse & Import Data ---
+        importBtn.addEventListener('click', async () => {
+            if (!gasUrl) return showToast("Hubungkan ke Google Script dulu", "error");
+            
+            const text = importInput.value.trim();
+            if (!text) return showToast("Silakan masukkan data terlebih dahulu", "error");
+
+            const rows = text.split('\n');
+            let successCount = 0;
+            let errorCount = 0;
+            const newDonors = [];
+
+            const originalBtn = importBtn.innerHTML;
+            importBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Memproses...';
+            importBtn.disabled = true;
+
+            for (let line of rows) {
+                line = line.trim();
+                if (!line) continue;
+
+                let parsed = null;
+                if (line.includes('\t')) {
+                    const cols = line.split('\t');
+                    if (cols.length >= 4) parsed = { id: cols[0], sapaan: cols[1], nama: cols[2], wa: cols[3] };
+                } else if (line.includes(',')) {
+                    const cols = line.split(',');
+                    if (cols.length >= 4) parsed = { id: cols[0], sapaan: cols[1], nama: cols[2], wa: cols[3] };
+                } else {
+                    const match = line.match(/^(.*?)\s+(.*?)\s+(.*?)\s+(\d+)$/);
+                    if (match) {
+                        const waMatch = line.match(/(\d+)$/);
+                        if (waMatch) {
+                            const waStr = waMatch[1];
+                            const restStr = line.substring(0, line.length - waStr.length).trim();
+                            const parts = restStr.split(' ');
+                            if(parts.length >= 3) {
+                                const nama = parts.pop();
+                                const sapaan = parts.pop();
+                                const id = parts.join(' ');
+                                parsed = { id, sapaan, nama, wa: waStr };
+                            }
+                        }
+                    }
+                }
+
+                if (parsed) {
+                    let cleanWa = parsed.wa.replace(/\D/g, '');
+                    if (cleanWa.startsWith('0')) cleanWa = '62' + cleanWa.substring(1);
+
+                    newDonors.push({
+                        id_doc: generateId(),
+                        id_donatur: parsed.id.trim(),
+                        sapaan: parsed.sapaan.trim(),
+                        nama: parsed.nama.trim(),
+                        whatsapp: cleanWa,
+                        last_sent: "",
+                        respon: "",
+                        created_at: Date.now()
+                    });
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            if (newDonors.length > 0) {
+                donorsList = [...donorsList, ...newDonors];
+                renderTable(); 
+                
+                try {
+                    await fetchGAS('addDonors', { donors: newDonors });
+                    showToast(`Berhasil import ${successCount} data ke Sheet.`);
+                } catch (error) {
+                    showToast("Gagal menyimpan ke Sheet, coba muat ulang (refresh) nanti.", "error");
+                }
+            }
+
+            importBtn.innerHTML = originalBtn;
+            importBtn.disabled = false;
+            importInput.value = '';
+
+            if (errorCount > 0) {
+                showToast(`Gagal membaca ${errorCount} baris. Pastikan format benar.`, 'error');
+            }
+        });
+
+        // --- Action: Update Respon ---
+        window.updateRespon = async (docId, newValue) => {
+            const donorIndex = donorsList.findIndex(d => d.id_doc === docId);
+            if (donorIndex === -1) return;
+            
+            donorsList[donorIndex].respon = newValue;
+
+            try {
+                await fetchGAS('updateRespon', { id_doc: docId, respon: newValue });
+                showToast("Respon berhasil disimpan!");
+            } catch (error) {
+                console.error("Gagal update respon:", error);
+                showToast("Gagal menyimpan respon di server. Pastikan internet stabil.", "error");
+            }
+        };
+
+        // --- Action: Send WhatsApp ---
+        window.sendWhatsApp = async (docId) => {
+            const donorIndex = donorsList.findIndex(d => d.id_doc === docId);
+            if (donorIndex === -1) return;
+            const donor = donorsList[donorIndex];
+
+            if (!messageTemplate) {
+                showToast("Template pesan belum dibuat!", "error");
+                templateInput.focus();
+                return;
+            }
+
+            let msg = messageTemplate.replace(/{id}/g, donor.id_donatur)
+                                     .replace(/{sapaan}/g, donor.sapaan)
+                                     .replace(/{nama}/g, donor.nama);
+            
+            window.open(`https://wa.me/${donor.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+
+            const timestamp = new Date().toLocaleString('id-ID');
+            donorsList[donorIndex].last_sent = timestamp;
+            renderTable();
+
+            try {
+                await fetchGAS('updateStatus', { id_doc: docId, last_sent: timestamp });
+            } catch (error) {
+                console.error("Gagal update status di Sheet");
+            }
+        };
+
+        // --- Action: Delete Single Data ---
+        window.deleteDonor = async (docId) => {
+            donorsList = donorsList.filter(d => d.id_doc !== docId);
+            renderTable();
+            showToast("Menghapus data...");
+
+            try {
+                await fetchGAS('deleteDonor', { id_doc: docId });
+            } catch (error) {
+                showToast("Gagal hapus dari Sheet", "error");
+            }
+        };
+
+        // --- Action: Clear All Data ---
+        clearAllBtn.addEventListener('click', async () => {
+            if (donorsList.length === 0) return;
+            
+            const originalText = clearAllBtn.innerHTML;
+            if (clearAllBtn.dataset.confirming === "true") {
+                clearAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
+                clearAllBtn.disabled = true;
+                
+                donorsList = [];
+                renderTable();
+                
+                try {
+                    await fetchGAS('clearAll');
+                    showToast("Semua data berhasil dihapus dari Sheet");
+                } catch (error) {
+                    showToast("Gagal menghapus data dari Sheet", "error");
+                } finally {
+                    clearAllBtn.dataset.confirming = "false";
+                    clearAllBtn.innerHTML = originalText;
+                    clearAllBtn.disabled = false;
+                }
+            } else {
+                clearAllBtn.dataset.confirming = "true";
+                clearAllBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Klik lagi untuk HAPUS';
+                clearAllBtn.classList.add('text-red-700', 'font-bold');
+                
+                setTimeout(() => {
+                    if (clearAllBtn.dataset.confirming === "true") {
+                        clearAllBtn.dataset.confirming = "false";
+                        clearAllBtn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua Data';
+                        clearAllBtn.classList.remove('text-red-700', 'font-bold');
+                    }
+                }, 3000);
+            }
+        });
+
+        // --- Helper function ---
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
+            );
+        }
+
+        // Initialize App
+        window.onload = () => loadData();
+
+        // --- PWA Service Worker Registration (BARU) ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker berhasil didaftarkan dengan scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker gagal didaftarkan: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
