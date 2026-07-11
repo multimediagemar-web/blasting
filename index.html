@@ -26,6 +26,11 @@
         .tab-active { border-bottom: 2px solid #0d9488; color: #0d9488; font-weight: bold; }
         .tab-inactive { color: #64748b; }
         .tab-inactive:hover { color: #334155; }
+        
+        /* Animasi loading input balasan */
+        .input-saving { background-color: #f1f5f9; color: #94a3b8; pointer-events: none; }
+        .input-success { animation: flashSuccess 1s ease-out; }
+        @keyframes flashSuccess { 0% { background-color: #dcfce7; } 100% { background-color: white; } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-800">
@@ -95,9 +100,9 @@
                         <span class="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border border-slate-200" id="totalMaster">Total: 0</span>
                     </div>
                     <div class="p-3 border-b border-slate-100 bg-white">
-                        <input type="text" id="searchMaster" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-teal-500 w-full p-2 outline-none" placeholder="Cari donatur global...">
+                        <input type="text" id="searchMaster" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-teal-500 w-full p-2 outline-none" placeholder="Cari donatur global... (Ketik nama/WA)">
                     </div>
-                    <div class="overflow-x-auto table-container flex-grow">
+                    <div class="overflow-x-auto table-container flex-grow min-h-[300px]">
                         <table class="w-full text-left border-collapse">
                             <thead>
                                 <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
@@ -112,6 +117,26 @@
                                 <!-- Data Master JS -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Paginasi Master -->
+                    <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-sm text-slate-600">
+                        <div class="flex items-center gap-2">
+                            <span>Tampilkan:</span>
+                            <select id="masterPageSize" class="border border-slate-300 rounded p-1 outline-none focus:ring-1 focus:ring-teal-500 bg-white">
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="masterPageInfo">Halaman 1 dari 1</span>
+                            <div class="flex gap-1">
+                                <button id="btnPrevMaster" class="bg-white border border-slate-300 hover:bg-slate-100 w-8 h-8 rounded flex items-center justify-center disabled:opacity-50"><i class="fa-solid fa-chevron-left"></i></button>
+                                <button id="btnNextMaster" class="bg-white border border-slate-300 hover:bg-slate-100 w-8 h-8 rounded flex items-center justify-center disabled:opacity-50"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -142,13 +167,18 @@
         <!-- ================= VIEW 3: CAMPAIGN DETAIL ================= -->
         <div id="view-campaign-detail" class="hidden space-y-6">
             <!-- Header Navigasi Detail -->
-            <div class="flex items-center gap-4">
-                <button onclick="switchView('campaigns')" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 w-10 h-10 rounded-lg flex items-center justify-center transition shadow-sm">
-                    <i class="fa-solid fa-arrow-left"></i>
-                </button>
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-800" id="detailCampName">Nama Campaign</h1>
-                    <p class="text-sm text-slate-500" id="detailCampDate">Dibuat pada: -</p>
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <button onclick="switchView('campaigns')" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 w-10 h-10 rounded-lg flex items-center justify-center transition shadow-sm">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800" id="detailCampName">Nama Campaign</h1>
+                        <p class="text-sm text-slate-500" id="detailCampDate">Dibuat pada: -</p>
+                    </div>
+                </div>
+                <div class="text-xs bg-slate-100 text-slate-600 px-3 py-2 rounded-lg border border-slate-200 shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-500"></i> Ketik balasan & tekan <b>Enter</b> untuk menyimpan
                 </div>
             </div>
 
@@ -186,14 +216,14 @@
                         </div>
 
                         <!-- Tabel -->
-                        <div class="overflow-x-auto table-container flex-grow">
+                        <div class="overflow-x-auto table-container flex-grow min-h-[300px]">
                             <table class="w-full text-left border-collapse">
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
                                         <th class="p-3 font-semibold border-b">Nama & ID</th>
                                         <th class="p-3 font-semibold border-b text-center">Status</th>
                                         <th class="p-3 font-semibold border-b text-center min-w-[130px]">Kategori Respon</th>
-                                        <th class="p-3 font-semibold border-b min-w-[180px]">Isi Balasan</th>
+                                        <th class="p-3 font-semibold border-b min-w-[180px]">Isi Balasan (Tekan Enter)</th>
                                         <th class="p-3 font-semibold border-b text-center">Kirim</th>
                                     </tr>
                                 </thead>
@@ -202,7 +232,29 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="p-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 font-medium" id="totalCampAudience">Total: 0 Audiens</div>
+                        
+                        <!-- Paginasi Campaign -->
+                        <div class="p-3 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-sm text-slate-600">
+                            <div class="flex items-center gap-4">
+                                <span class="font-medium text-slate-500 bg-white px-2 py-1 rounded border border-slate-200" id="totalCampAudience">Total: 0</span>
+                                <div class="flex items-center gap-2">
+                                    <span>Tampilkan:</span>
+                                    <select id="campPageSize" class="border border-slate-300 rounded p-1 outline-none focus:ring-1 focus:ring-teal-500 bg-white">
+                                        <option value="10">10</option>
+                                        <option value="25">25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span id="campPageInfo">Halaman 1 dari 1</span>
+                                <div class="flex gap-1">
+                                    <button id="btnPrevCamp" class="bg-white border border-slate-300 hover:bg-slate-100 w-8 h-8 rounded flex items-center justify-center disabled:opacity-50"><i class="fa-solid fa-chevron-left"></i></button>
+                                    <button id="btnNextCamp" class="bg-white border border-slate-300 hover:bg-slate-100 w-8 h-8 rounded flex items-center justify-center disabled:opacity-50"><i class="fa-solid fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -270,14 +322,20 @@
     <script>
         // --- STATE MANAJEMEN ---
         let state = {
-            donors: [],          // Master Donatur
-            campaigns: [],       // Daftar Campaign
-            details: [],         // Hubungan Campaign <-> Donatur (Respon, Status)
-            options: [],         // Opsi Dropdown Respon
+            donors: [],          
+            campaigns: [],       
+            details: [],         
+            options: [],         
             currentView: 'campaigns',
             activeCampId: null,
             modalSelectedIds: new Set()
         };
+        
+        // Paginasi State
+        let masterPage = 1, masterLimit = 10;
+        let campPage = 1, campLimit = 10;
+        let filteredMasterData = [];
+        let filteredCampData = [];
 
         let gasUrl = localStorage.getItem('crm_gas_url') || "";
         let sheetId = localStorage.getItem('crm_sheet_id') || "";
@@ -290,7 +348,7 @@
         function showToast(msg, type = 'success') {
             const toast = document.createElement('div');
             const icon = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
-            toast.className = `toast-enter flex items-center bg-white shadow-lg rounded border-l-4 p-4 ${type === 'success' ? 'border-green-500' : 'border-red-500'}`;
+            toast.className = `toast-enter flex items-center bg-white shadow-lg rounded border-l-4 p-4 z-50 ${type === 'success' ? 'border-green-500' : 'border-red-500'}`;
             toast.innerHTML = `<div class="mr-3 text-lg">${icon}</div><div class="text-sm font-medium">${msg}</div>`;
             document.getElementById('toastContainer').appendChild(toast);
             setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); }, 4000); 
@@ -373,57 +431,50 @@
             const search = document.getElementById('searchMaster').value.toLowerCase();
             const tbody = document.getElementById('masterTableBody');
             
-            const filtered = state.donors.filter(d => 
+            filteredMasterData = state.donors.filter(d => 
                 String(d.nama).toLowerCase().includes(search) || String(d.whatsapp).includes(search) || String(d.id_donatur).toLowerCase().includes(search)
             );
             
-            document.getElementById('totalMaster').innerText = `Total: ${filtered.length}`;
-            if(filtered.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada donatur.</td></tr>`;
+            document.getElementById('totalMaster').innerText = `Total: ${filteredMasterData.length}`;
+            
+            // Logika Paginasi
+            const totalPages = Math.ceil(filteredMasterData.length / masterLimit) || 1;
+            if (masterPage > totalPages) masterPage = totalPages;
+            
+            document.getElementById('masterPageInfo').innerText = `Halaman ${masterPage} dari ${totalPages}`;
+            document.getElementById('btnPrevMaster').disabled = (masterPage === 1);
+            document.getElementById('btnNextMaster').disabled = (masterPage === totalPages);
+
+            const startIdx = (masterPage - 1) * masterLimit;
+            const endIdx = startIdx + masterLimit;
+            const paginatedData = filteredMasterData.slice(startIdx, endIdx);
+            
+            if(paginatedData.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada donatur.</td></tr>`;
             
             let html = '';
-            filtered.forEach(d => {
+            paginatedData.forEach(d => {
                 
-                // --- ALGORITMA BARU: Kalkulasi Aktivitas Terakhir dari Detail Campaign ---
-                
-                // 1. Kumpulkan semua rekaman/keterlibatan donatur ini di seluruh campaign
+                // Kalkulasi Aktivitas Terakhir
                 const historyInCampaigns = state.details.filter(det => det.id_doc === d.id_doc);
-                
                 let lastActivityHtml = `<span class="text-xs text-slate-400 italic">Belum ada aktivitas</span>`;
                 
                 if (historyInCampaigns.length > 0) {
-                    // 2. Gabungkan data detail dengan data tanggal Campaign untuk bisa diurutkan
                     const historyWithDates = historyInCampaigns.map(det => {
                         const campData = state.campaigns.find(c => c.camp_id === det.camp_id);
-                        return {
-                            ...det,
-                            created_at_camp: campData ? campData.created_at : 0 // Angka timestamp pembuatan campaign
-                        };
+                        return { ...det, created_at_camp: campData ? campData.created_at : 0 };
                     });
                     
-                    // 3. Urutkan berdasarkan Campaign yang paling baru (descending)
                     historyWithDates.sort((a, b) => b.created_at_camp - a.created_at_camp);
-                    
-                    // 4. Ambil catatan yang paling atas (paling baru)
                     const latestRecord = historyWithDates[0];
                     
-                    // 5. Susun tampilan HTML untuk 3 kolom tambahan (dikompres jadi 1 kolom visual agar rapi)
                     let tglKirimText = latestRecord.last_sent ? `<i class="fa-regular fa-calendar-check text-green-500 mr-1"></i> ${escapeHTML(latestRecord.last_sent.split(' ')[0])}` : `<i class="fa-regular fa-clock text-slate-400 mr-1"></i> Blm Kirim`;
-                    
                     let responText = latestRecord.respon ? `<span class="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-semibold ml-1">${escapeHTML(latestRecord.respon)}</span>` : '';
-                    
                     let balasanText = latestRecord.balasan ? `<div class="text-xs text-slate-500 truncate max-w-[200px] mt-1" title="${escapeHTML(latestRecord.balasan)}">💬 "${escapeHTML(latestRecord.balasan)}"</div>` : '';
                     
-                    lastActivityHtml = `
-                        <div class="flex flex-col justify-center">
-                            <div class="text-xs text-slate-700 flex items-center">
-                                ${tglKirimText} ${responText}
-                            </div>
-                            ${balasanText}
-                        </div>
-                    `;
+                    lastActivityHtml = `<div class="flex flex-col justify-center"><div class="text-xs text-slate-700 flex items-center">${tglKirimText} ${responText}</div>${balasanText}</div>`;
                 }
                 
-                html += `<tr class="hover:bg-slate-50">
+                html += `<tr class="hover:bg-slate-50 border-b border-slate-50">
                     <td class="p-3 font-medium text-slate-700">${escapeHTML(d.id_donatur)}</td>
                     <td class="p-3"><div class="font-bold text-slate-800">${escapeHTML(d.nama)}</div><div class="text-xs text-slate-500">${escapeHTML(d.sapaan)}</div></td>
                     <td class="p-3 font-mono text-xs">${escapeHTML(d.whatsapp)}</td>
@@ -434,7 +485,11 @@
             tbody.innerHTML = html;
         }
 
-        document.getElementById('searchMaster').addEventListener('input', renderMasterTable);
+        // Paginasi Event Listeners Master
+        document.getElementById('searchMaster').addEventListener('input', () => { masterPage = 1; renderMasterTable(); });
+        document.getElementById('masterPageSize').addEventListener('change', (e) => { masterLimit = parseInt(e.target.value); masterPage = 1; renderMasterTable(); });
+        document.getElementById('btnPrevMaster').addEventListener('click', () => { if(masterPage > 1) { masterPage--; renderMasterTable(); } });
+        document.getElementById('btnNextMaster').addEventListener('click', () => { const max = Math.ceil(filteredMasterData.length / masterLimit); if(masterPage < max) { masterPage++; renderMasterTable(); } });
 
         document.getElementById('importBtn').addEventListener('click', async () => {
             const text = document.getElementById('importInput').value.trim();
@@ -483,7 +538,6 @@
             const sorted = [...state.campaigns].sort((a,b) => b.camp_id.localeCompare(a.camp_id));
             
             sorted.forEach(c => {
-                // Hitung statistik audiens (dari detail)
                 const audiens = state.details.filter(d => d.camp_id === c.camp_id);
                 const terkirim = audiens.filter(d => d.last_sent).length;
                 
@@ -517,13 +571,14 @@
             try {
                 await fetchGAS('addCampaign', { campaign: camp });
                 showToast("Campaign berhasil dibuat!"); inp.value = '';
-                openCampaign(camp.camp_id); // Langsung buka
+                openCampaign(camp.camp_id); 
             } catch(e) { showToast("Gagal buat campaign", "error"); }
             btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Buat'; btn.disabled = false;
         }
 
         function openCampaign(campId) {
             state.activeCampId = campId;
+            campPage = 1; // Reset halaman
             switchView('campaign-detail');
             renderCampaignDetail();
         }
@@ -537,7 +592,6 @@
             document.getElementById('detailCampDate').innerText = `Dibuat pada: ${camp.tanggal}`;
             document.getElementById('campTemplateInput').value = camp.template || "";
             
-            // Build dropdown opsi respon untuk filter
             let htmlOpt = `<option value="all">Semua Kategori</option><option value="empty">Belum Ada Respon</option>`;
             state.options.forEach(o => htmlOpt += `<option value="${escapeHTML(o)}">${escapeHTML(o)}</option>`);
             document.getElementById('filterCampRespon').innerHTML = htmlOpt;
@@ -555,14 +609,14 @@
             const myDetails = state.details.filter(d => d.camp_id === campId);
             document.getElementById('totalCampAudience').innerText = `Total: ${myDetails.length} Audiens`;
 
-            // 2. Gabungkan dengan data global (Master) untuk dapat Nama & WA
+            // 2. Gabungkan dengan data global
             let merged = myDetails.map(det => {
                 const globalData = state.donors.find(g => g.id_doc === det.id_doc) || { nama: 'Terhapus', whatsapp: '-', sapaan: '-', id_donatur: '-' };
                 return { ...det, ...globalData };
             });
 
-            // 3. Filter berdasarkan search & respon
-            merged = merged.filter(m => {
+            // 3. Filter
+            filteredCampData = merged.filter(m => {
                 const matchSearch = String(m.nama).toLowerCase().includes(search) || String(m.whatsapp).includes(search);
                 let matchRespon = true;
                 if(filterRsp === 'empty') matchRespon = !m.respon;
@@ -570,28 +624,38 @@
                 return matchSearch && matchRespon;
             });
 
-            if(merged.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Tidak ada audiens yang cocok. Tambahkan donatur ke campaign ini.</td></tr>`;
+            // Logika Paginasi Campaign
+            const totalPages = Math.ceil(filteredCampData.length / campLimit) || 1;
+            if (campPage > totalPages) campPage = totalPages;
+            
+            document.getElementById('campPageInfo').innerText = `Halaman ${campPage} dari ${totalPages}`;
+            document.getElementById('btnPrevCamp').disabled = (campPage === 1);
+            document.getElementById('btnNextCamp').disabled = (campPage === totalPages);
+
+            const startIdx = (campPage - 1) * campLimit;
+            const endIdx = startIdx + campLimit;
+            const paginatedData = filteredCampData.slice(startIdx, endIdx);
+
+            if(paginatedData.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Tidak ada audiens yang cocok. Tambahkan donatur ke campaign ini.</td></tr>`;
 
             let html = '';
-            // Generate dropdown HTML sekali saja
             let dropOptions = `<option value="">- Pilih -</option>`;
             state.options.forEach(o => dropOptions += `<option value="${escapeHTML(o)}">${escapeHTML(o)}</option>`);
 
-            merged.forEach(m => {
+            paginatedData.forEach(m => {
                 const stsHtml = m.last_sent ? `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>Terkirim</span>` 
                                             : `<span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full"><i class="fa-regular fa-clock mr-1"></i>Belum</span>`;
                 
-                // Set selected dropOptions
                 const rowDrop = dropOptions.replace(`value="${escapeHTML(m.respon)}"`, `value="${escapeHTML(m.respon)}" selected`);
 
                 html += `<tr class="hover:bg-slate-50 border-b border-slate-50">
                     <td class="p-3"><div class="font-bold text-slate-700">${escapeHTML(m.nama)}</div><div class="text-xs text-slate-400">${escapeHTML(m.id_donatur)} | ${escapeHTML(m.whatsapp)}</div></td>
                     <td class="p-3 text-center">${stsHtml}</td>
                     <td class="p-3 text-center">
-                        <select onchange="updateCampRecord('${m.id_doc}', 'respon', this.value)" class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full bg-white shadow-sm">${rowDrop}</select>
+                        <select onchange="updateCampRecord(this, '${m.id_doc}', 'respon', this.value)" class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full bg-white shadow-sm transition">${rowDrop}</select>
                     </td>
                     <td class="p-3">
-                        <input type="text" value="${escapeHTML(m.balasan || '')}" onchange="updateCampRecord('${m.id_doc}', 'balasan', this.value)" placeholder="Ketik/paste isi balasan..." class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full shadow-sm">
+                        <input type="text" value="${escapeHTML(m.balasan || '')}" onkeydown="handleEnterSave(event, this, '${m.id_doc}')" placeholder="Ketik lalu tekan Enter..." class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full shadow-sm transition placeholder-slate-300">
                     </td>
                     <td class="p-3 text-center">
                         <button onclick="sendCampWA('${m.id_doc}')" class="bg-green-500 hover:bg-green-600 text-white w-8 h-8 rounded shadow flex items-center justify-center transition" title="Kirim WA">
@@ -603,13 +667,18 @@
             tbody.innerHTML = html;
         }
 
-        document.getElementById('searchCampDonor').addEventListener('input', renderCampaignAudience);
-        document.getElementById('filterCampRespon').addEventListener('change', renderCampaignAudience);
+        // Paginasi Event Listeners Campaign
+        document.getElementById('searchCampDonor').addEventListener('input', () => { campPage = 1; renderCampaignAudience(); });
+        document.getElementById('filterCampRespon').addEventListener('change', () => { campPage = 1; renderCampaignAudience(); });
+        document.getElementById('campPageSize').addEventListener('change', (e) => { campLimit = parseInt(e.target.value); campPage = 1; renderCampaignAudience(); });
+        document.getElementById('btnPrevCamp').addEventListener('click', () => { if(campPage > 1) { campPage--; renderCampaignAudience(); } });
+        document.getElementById('btnNextCamp').addEventListener('click', () => { const max = Math.ceil(filteredCampData.length / campLimit); if(campPage < max) { campPage++; renderCampaignAudience(); } });
+
 
         async function saveCampTemplate() {
             const temp = document.getElementById('campTemplateInput').value.trim();
             const camp = state.campaigns.find(c => c.camp_id === state.activeCampId);
-            camp.template = temp; // Optimistic
+            camp.template = temp; 
             
             const btn = document.getElementById('btnSaveTemplate');
             btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
@@ -620,22 +689,45 @@
             btn.innerHTML = 'Simpan Pesan'; btn.disabled = false;
         }
 
-        // --- UPDATE DATA DI DALAM CAMPAIGN (RESPON, BALASAN, STATUS) ---
-        async function updateCampRecord(idDoc, field, value) {
+        // --- SISTEM PENYIMPANAN DENGAN ANIMASI LOADING (ENTER) ---
+        async function handleEnterSave(event, inputElement, idDoc) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Mencegah form tersubmit jika ada
+                inputElement.blur(); // Hapus kursor dari kotak input (opsional)
+                await updateCampRecord(inputElement, idDoc, 'balasan', inputElement.value);
+            }
+        }
+
+        async function updateCampRecord(uiElement, idDoc, field, value) {
             const detailIdx = state.details.findIndex(d => d.camp_id === state.activeCampId && d.id_doc === idDoc);
             if(detailIdx === -1) return;
             
-            // Optimistic update
+            // Animasi Loading
+            uiElement.classList.add('input-saving');
+            
+            // Optimistic update state lokal
             state.details[detailIdx][field] = value;
             
             const payload = { camp_id: state.activeCampId, id_doc: idDoc };
             payload[field] = value;
 
             try {
-                // Tidak perlu await jika ingin terasa instan di UI, GAS jalan di background
-                fetchGAS('updateCampaignRecord', payload);
-                if(field === 'balasan') showToast("Balasan tersimpan otomatis");
-            } catch(e) { console.warn(e); }
+                // Tunggu respon API selesai menyimpan
+                await fetchGAS('updateCampaignRecord', payload);
+                
+                // Animasi Sukses
+                uiElement.classList.remove('input-saving');
+                uiElement.classList.add('input-success');
+                setTimeout(() => uiElement.classList.remove('input-success'), 1000);
+                
+                // Tambahkan ikon centang sebentar jika itu dropdown atau input
+                if(field === 'balasan') showToast("Balasan tersimpan!");
+                
+            } catch(e) { 
+                console.warn(e); 
+                uiElement.classList.remove('input-saving');
+                showToast("Gagal menyimpan ke server. Cek internet.", "error");
+            }
         }
 
         function sendCampWA(idDoc) {
@@ -647,14 +739,14 @@
             let msg = camp.template.replace(/{id}/g, globalDonor.id_donatur).replace(/{sapaan}/g, globalDonor.sapaan).replace(/{nama}/g, globalDonor.nama);
             window.open(`https://wa.me/${globalDonor.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
             
-            updateCampRecord(idDoc, 'last_sent', new Date().toLocaleString('id-ID'));
+            // Secara rahasia memperbarui tanpa loading UI pada tombol (karena pindah tab)
+            updateCampRecord({classList: {add: ()=>{}, remove: ()=>{}}}, idDoc, 'last_sent', new Date().toLocaleString('id-ID'));
             renderCampaignAudience();
         }
 
         // ================= MODAL PEMILIHAN DONATUR KE CAMPAIGN =================
         function openSelectDonorModal() {
             state.modalSelectedIds.clear();
-            // Pre-fill dg yang sudah ada di campaign ini
             state.details.filter(d => d.camp_id === state.activeCampId).forEach(d => state.modalSelectedIds.add(d.id_doc));
             
             document.getElementById('searchModalDonor').value = '';
@@ -717,14 +809,8 @@
             
             try {
                 await fetchGAS('syncCampaignDonors', { camp_id: state.activeCampId, donor_ids: selectedArray });
-                
-                // Update local State 'details'
-                // Hapus yg lama untuk campaign ini
                 state.details = state.details.filter(d => d.camp_id !== state.activeCampId);
-                // Masukkan yg baru (tanpa hapus respon lama klo API nya sebenarnya pertahankan, 
-                // tp krn UI kita fetch ulang nanti gpp reload saja biar aman)
                 await loadData(); // Reload agar relasinya bersih sesuai di database
-                
                 showToast("Audiens Campaign diperbarui!");
                 closeSelectDonorModal();
             } catch (e) {
