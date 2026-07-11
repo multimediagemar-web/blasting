@@ -555,9 +555,10 @@
                 const terkirim = audiens.filter(d => d.last_sent).length;
                 
                 html += `
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between" onclick="openCampaign('${c.camp_id}')">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between relative group" onclick="openCampaign('${c.camp_id}')">
+                    <button onclick="deleteCampaignLogic(event, '${c.camp_id}', this)" class="absolute top-3 right-3 text-slate-300 hover:text-red-500 transition w-8 h-8 rounded flex items-center justify-center bg-white shadow-sm opacity-0 group-hover:opacity-100" title="Hapus Campaign"><i class="fa-solid fa-trash-can"></i></button>
                     <div>
-                        <h3 class="font-bold text-lg text-slate-800 mb-1">${escapeHTML(c.nama_campaign)}</h3>
+                        <h3 class="font-bold text-lg text-slate-800 mb-1 pr-6">${escapeHTML(c.nama_campaign)}</h3>
                         <div class="text-xs text-slate-500 mb-4"><i class="fa-regular fa-calendar mr-1"></i> ${escapeHTML(c.tanggal)}</div>
                     </div>
                     <div class="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
@@ -587,6 +588,42 @@
                 openCampaign(camp.camp_id); 
             } catch(e) { showToast("Gagal buat campaign", "error"); }
             btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Buat'; btn.disabled = false;
+        }
+
+        async function deleteCampaignLogic(e, campId, btn) {
+            e.stopPropagation(); // Mencegah terklik buka campaign
+            
+            if (btn.dataset.confirming === "true") {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+                
+                state.campaigns = state.campaigns.filter(c => c.camp_id !== campId);
+                state.details = state.details.filter(d => d.camp_id !== campId);
+                renderCampaignList();
+                showToast("Menghapus campaign...");
+                
+                try {
+                    await fetchGAS('deleteCampaign', { camp_id: campId });
+                    showToast("Campaign beserta datanya sukses dihapus!");
+                } catch(err) {
+                    showToast("Gagal menghapus dari server, koneksi terputus.", "error");
+                }
+            } else {
+                const originalHtml = btn.innerHTML;
+                btn.dataset.confirming = "true";
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                btn.classList.add('bg-red-100', 'text-red-500', 'opacity-100');
+                btn.classList.remove('text-slate-300');
+                
+                setTimeout(() => {
+                    if (btn.dataset.confirming === "true") {
+                        btn.dataset.confirming = "false";
+                        btn.innerHTML = originalHtml;
+                        btn.classList.remove('bg-red-100', 'text-red-500', 'opacity-100');
+                        btn.classList.add('text-slate-300');
+                    }
+                }, 3000);
+            }
         }
 
         function openCampaign(campId) {
@@ -620,7 +657,7 @@
 
             // 1. Ambil relasi detail untuk campaign ini
             const myDetails = state.details.filter(d => d.camp_id === campId);
-            document.getElementById('totalCampAudience').innerText = `Total: ${myDetails.length} Audiens`;
+            document.getElementById('totalCampAudience').innerText = `Total: ${myDetails.length}`;
 
             // 2. Gabungkan dengan data global
             let merged = myDetails.map(det => {
@@ -705,8 +742,8 @@
         // --- SISTEM PENYIMPANAN DENGAN ANIMASI LOADING (ENTER) ---
         async function handleEnterSave(event, inputElement, idDoc) {
             if (event.key === "Enter") {
-                event.preventDefault(); // Mencegah form tersubmit jika ada
-                inputElement.blur(); // Hapus kursor dari kotak input (opsional)
+                event.preventDefault(); 
+                inputElement.blur(); 
                 await updateCampRecord(inputElement, idDoc, 'balasan', inputElement.value);
             }
         }
@@ -725,15 +762,12 @@
             payload[field] = value;
 
             try {
-                // Tunggu respon API selesai menyimpan
                 await fetchGAS('updateCampaignRecord', payload);
                 
-                // Animasi Sukses
                 uiElement.classList.remove('input-saving');
                 uiElement.classList.add('input-success');
                 setTimeout(() => uiElement.classList.remove('input-success'), 1000);
                 
-                // Tambahkan ikon centang sebentar jika itu dropdown atau input
                 if(field === 'balasan') showToast("Balasan tersimpan!");
                 
             } catch(e) { 
@@ -752,7 +786,6 @@
             let msg = camp.template.replace(/{id}/g, globalDonor.id_donatur).replace(/{sapaan}/g, globalDonor.sapaan).replace(/{nama}/g, globalDonor.nama);
             window.open(`https://wa.me/${globalDonor.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
             
-            // Secara rahasia memperbarui tanpa loading UI pada tombol (karena pindah tab)
             updateCampRecord({classList: {add: ()=>{}, remove: ()=>{}}}, idDoc, 'last_sent', new Date().toLocaleString('id-ID'));
             renderCampaignAudience();
         }
@@ -777,33 +810,24 @@
             const filterStatus = document.getElementById('filterModalStatus').value;
             const listContainer = document.getElementById('modalDonorList');
             
-            // Reset "Pilih Semua" saat memfilter agar tidak membingungkan
             document.getElementById('selectAllCheckbox').checked = false;
             
             const filtered = state.donors.filter(d => {
-                // 1. Filter Text
                 const matchSearch = String(d.nama).toLowerCase().includes(search) || String(d.id_donatur).toLowerCase().includes(search);
                 if (!matchSearch) return false;
 
-                // 2. Filter Berdasarkan Aktivitas Riwayat (Lanjutan)
                 if (filterStatus !== 'all') {
-                    // Cari semua riwayat donatur ini di seluruh campaign
                     const history = state.details.filter(det => det.id_doc === d.id_doc);
                     
                     if (filterStatus === 'unblasted') {
-                        // Jika ada 1 saja record yang punya last_sent, berarti dia PERNAH di blast.
-                        // Kita hanya mencari yang BELUM PERNAH (everBlasted = false)
                         const everBlasted = history.some(det => det.last_sent && det.last_sent.trim() !== "");
                         if (everBlasted) return false;
                     } 
                     else if (filterStatus === 'noreply') {
-                        // Jika ada 1 saja record yang punya balasan, berarti dia PERNAH membalas.
-                        // Kita hanya mencari yang BELUM PERNAH MEMBALAS SAMA SEKALI
                         const everReplied = history.some(det => det.balasan && det.balasan.trim() !== "");
                         if (everReplied) return false;
                     }
                 }
-                
                 return true;
             });
             
@@ -857,7 +881,7 @@
             try {
                 await fetchGAS('syncCampaignDonors', { camp_id: state.activeCampId, donor_ids: selectedArray });
                 state.details = state.details.filter(d => d.camp_id !== state.activeCampId);
-                await loadData(); // Reload agar relasinya bersih sesuai di database
+                await loadData(); 
                 showToast("Audiens Campaign diperbarui!");
                 closeSelectDonorModal();
             } catch (e) {
@@ -865,7 +889,6 @@
             }
             btn.innerHTML = 'Simpan Perubahan'; btn.disabled = false;
         }
-
 
         // ================= KONEKSI & PENGATURAN AWAL =================
         document.getElementById('openSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('hidden'));
@@ -875,13 +898,11 @@
         refreshDataBtn.addEventListener('click', async () => {
             if (!gasUrl || !sheetId) return showToast("Hubungkan ke Google Script terlebih dahulu", "error");
             
-            // Animasi putar (loading)
             refreshIcon.classList.add('fa-spin');
             refreshDataBtn.disabled = true;
             
             await loadData();
             
-            // Hapus animasi putar setelah selesai
             refreshIcon.classList.remove('fa-spin');
             refreshDataBtn.disabled = false;
             showToast("Data berhasil disegarkan dari server!");
