@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM WhatsApp Blast Donatur</title>
+    <title>CRM WhatsApp Campaign</title>
     
     <!-- PWA Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -13,17 +13,19 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* Custom scrollbar for table */
         .table-container::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .table-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         .table-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
         
-        /* Toast animation */
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .toast-enter { animation: slideIn 0.3s ease-out forwards; }
         .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+        
+        .tab-active { border-bottom: 2px solid #0d9488; color: #0d9488; font-weight: bold; }
+        .tab-inactive { color: #64748b; }
+        .tab-inactive:hover { color: #334155; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-800">
@@ -33,15 +35,14 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center space-x-3">
-                    <i class="fa-solid fa-hands-holding-circle text-2xl"></i>
-                    <span class="font-bold text-xl tracking-wide hidden sm:block">CRM Donatur</span>
+                    <i class="fa-solid fa-bullhorn text-2xl"></i>
+                    <span class="font-bold text-xl tracking-wide hidden sm:block">CRM Campaigner</span>
                 </div>
                 <div class="flex items-center space-x-3">
                     <div class="text-xs sm:text-sm font-medium bg-teal-700 px-3 py-1.5 rounded-full flex items-center space-x-2 cursor-pointer hover:bg-teal-800 transition" id="statusBadge" title="Klik untuk cek status">
                         <i class="fa-solid fa-cloud text-teal-300" id="statusIcon"></i>
                         <span id="connectionStatus" class="hidden sm:inline">Menunggu URL...</span>
                     </div>
-                    <!-- Tombol Buka Pengaturan (Pop-up) -->
                     <button id="openSettingsBtn" class="bg-teal-700 hover:bg-teal-800 text-white w-9 h-9 rounded-full transition flex items-center justify-center shadow-sm" title="Pengaturan Koneksi">
                         <i class="fa-solid fa-gear"></i>
                     </button>
@@ -50,167 +51,215 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Tab Navigation -->
+    <div class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8">
+                <button onclick="switchView('campaigns')" id="tab-campaigns" class="tab-active py-4 px-1 transition duration-200 flex items-center outline-none">
+                    <i class="fa-solid fa-layer-group mr-2"></i> Campaign Blasting
+                </button>
+                <button onclick="switchView('master')" id="tab-master" class="tab-inactive py-4 px-1 transition duration-200 flex items-center outline-none">
+                    <i class="fa-solid fa-database mr-2"></i> Master Donatur
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Left Column: Controls & Templates -->
-        <div class="space-y-6 lg:col-span-1">
+        <!-- ================= VIEW 1: MASTER DONATUR ================= -->
+        <div id="view-master" class="hidden grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Form Input Master -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
+                        <i class="fa-solid fa-user-plus mr-2 text-teal-600"></i> Tambah Master Donatur
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-3 leading-relaxed">
+                        Copy data dari Excel/Spreadsheet dan paste di bawah ini.<br>
+                        <strong class="text-slate-700">Format:</strong> ID, Sapaan, Nama, No WhatsApp
+                    </p>
+                    <textarea id="importInput" rows="5" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-mono text-xs whitespace-pre" placeholder="MA 11, Kak, Pian, 081234567890"></textarea>
+                    <button id="importBtn" class="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Tambahkan ke Database
+                    </button>
+                </div>
+            </div>
             
-            <!-- Template Section -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
-                    <i class="fa-regular fa-message mr-2 text-teal-600"></i> Template Pesan
-                </h2>
-                <div class="mb-3 text-sm text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                    <p class="font-semibold text-slate-600 mb-1">Gunakan Variabel:</p>
-                    <div class="flex flex-wrap gap-2">
-                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{id}</span>
-                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{sapaan}</span>
-                        <span class="bg-teal-100 text-teal-700 px-2 py-1 rounded text-xs font-mono">{nama}</span>
+            <!-- Tabel Master -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full min-h-[500px]">
+                    <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h2 class="font-bold text-slate-700 flex items-center"><i class="fa-solid fa-address-book mr-2 text-teal-600"></i> Seluruh Donatur</h2>
+                        <span class="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border border-slate-200" id="totalMaster">Total: 0</span>
+                    </div>
+                    <div class="p-3 border-b border-slate-100 bg-white">
+                        <input type="text" id="searchMaster" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-teal-500 w-full p-2 outline-none" placeholder="Cari donatur global...">
+                    </div>
+                    <div class="overflow-x-auto table-container flex-grow">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
+                                    <th class="p-3 font-semibold border-b">ID</th>
+                                    <th class="p-3 font-semibold border-b">Nama Lengkap</th>
+                                    <th class="p-3 font-semibold border-b">WhatsApp</th>
+                                    <th class="p-3 font-semibold border-b">Aktivitas Terakhir</th>
+                                    <th class="p-3 font-semibold border-b text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="masterTableBody" class="text-sm divide-y divide-slate-100">
+                                <!-- Data Master JS -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <textarea id="templateInput" rows="6" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition" placeholder="Contoh: Assalamu'alaikum {sapaan} {nama}, terima kasih atas donasinya. (ID: {id})"></textarea>
-                <button id="saveTemplateBtn" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-regular fa-floppy-disk mr-2"></i> Simpan Template
-                </button>
             </div>
-
-            <!-- Import Section -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
-                    <i class="fa-solid fa-file-import mr-2 text-teal-600"></i> Import Data
-                </h2>
-                <p class="text-xs text-slate-500 mb-3 leading-relaxed">
-                    Copy data dari Excel/Spreadsheet dan paste di bawah ini, atau ketik dengan pemisah koma (,).<br>
-                    <strong class="text-slate-700">Format:</strong> ID, Sapaan, Nama, No WhatsApp
-                </p>
-                <textarea id="importInput" rows="4" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition font-mono text-xs whitespace-pre" placeholder="MA 11, Hamba, Allah, 6285345338077"></textarea>
-                <button id="importBtn" class="mt-3 w-full bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-plus mr-2"></i> Tambahkan Data
-                </button>
-            </div>
-            
         </div>
 
-        <!-- Right Column: Table / Spreadsheet View -->
-        <div class="lg:col-span-2">
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full min-h-[500px]">
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 class="text-lg font-bold text-slate-700 flex items-center">
-                        <i class="fa-solid fa-table-list mr-2 text-teal-600"></i> Database Donatur
-                    </h2>
-                    <span class="text-sm font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200" id="totalDonatur">
-                        Total: 0
-                    </span>
-                </div>
-                
-                <!-- Toolbar Pencarian & Filter -->
-                <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-3 bg-white">
-                    <div class="relative flex-grow">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
-                        </div>
-                        <input type="text" id="searchInput" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block w-full pl-10 p-2.5 transition outline-none" placeholder="Cari nama, WA, atau ID...">
-                    </div>
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <select id="filterStatus" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 transition outline-none flex-1 md:flex-none">
-                            <option value="all">Semua Status</option>
-                            <option value="unsent">Belum Dikirim</option>
-                            <option value="sent">Terkirim</option>
-                        </select>
-                        <select id="filterRespon" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-teal-500 focus:border-teal-500 block p-2.5 transition outline-none flex-1 md:flex-none md:w-40">
-                            <option value="all">Semua Respon</option>
-                            <option value="empty">Belum Ada</option>
-                            <!-- Opsi dinamis -->
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Table -->
-                <div class="overflow-x-auto table-container flex-grow">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 text-sm uppercase tracking-wider">
-                                <th class="p-4 font-semibold border-b cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('id_donatur')" title="Urutkan ID">ID <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-id_donatur"></i></th>
-                                <th class="p-4 font-semibold border-b cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('sapaan')" title="Urutkan Sapaan">Sapaan <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-sapaan"></i></th>
-                                <th class="p-4 font-semibold border-b cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('nama')" title="Urutkan Nama">Nama <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-nama"></i></th>
-                                <th class="p-4 font-semibold border-b cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('whatsapp')">WhatsApp <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-whatsapp"></i></th>
-                                <th class="p-4 font-semibold border-b text-center cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('status')">Status <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-status"></i></th>
-                                <th class="p-4 font-semibold border-b text-center cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('respon')">Respon <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-respon"></i></th>
-                                <th class="p-4 font-semibold border-b cursor-pointer hover:bg-slate-200 transition select-none" onclick="window.handleSort('balasan')">Balasan <i class="fa-solid fa-sort text-slate-300 ml-1" id="sort-balasan"></i></th>
-                                <th class="p-4 font-semibold border-b text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="donorsTableBody" class="text-sm divide-y divide-slate-100">
-                            <!-- Rows will be populated here by JS -->
-                            <tr>
-                                <td colspan="8" class="p-8 text-center text-slate-400">
-                                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
-                                    <p>Memuat data...</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Paginasi (Halaman) -->
-                <div class="p-4 bg-white border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-slate-500">Tampilkan</span>
-                        <select id="itemsPerPage" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded focus:ring-teal-500 focus:border-teal-500 p-1 outline-none">
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                        <span class="text-sm text-slate-500">baris</span>
-                    </div>
-                    <span class="text-sm text-slate-500 font-medium" id="paginationInfo">Menampilkan 0 data</span>
-                    <div class="flex space-x-2" id="paginationControls">
-                        <!-- Buttons diisi oleh JS -->
-                    </div>
-                </div>
-
-                <div class="p-4 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
-                    <span><i class="fa-solid fa-circle-info mr-1"></i> Data tersimpan aman di cloud.</span>
-                    <button id="clearAllBtn" class="text-red-500 hover:text-red-700 font-medium transition flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua Data
+        <!-- ================= VIEW 2: CAMPAIGN LIST ================= -->
+        <div id="view-campaigns" class="block space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h1 class="text-2xl font-bold text-slate-800">Daftar Campaign</h1>
+                <!-- Form Buat Campaign Cepat -->
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <input type="text" id="newCampName" placeholder="Nama Campaign (Msl: Ramadhan 2026)" class="border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none flex-grow sm:w-64">
+                    <button onclick="createCampaign()" id="btnCreateCamp" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center whitespace-nowrap">
+                        <i class="fa-solid fa-plus mr-2"></i> Buat
                     </button>
+                </div>
+            </div>
+
+            <!-- Grid Campaigns -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="campaignGrid">
+                <!-- Data Campaign JS -->
+                <div class="col-span-full p-10 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p>Memuat Campaign...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW 3: CAMPAIGN DETAIL ================= -->
+        <div id="view-campaign-detail" class="hidden space-y-6">
+            <!-- Header Navigasi Detail -->
+            <div class="flex items-center gap-4">
+                <button onclick="switchView('campaigns')" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 w-10 h-10 rounded-lg flex items-center justify-center transition shadow-sm">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800" id="detailCampName">Nama Campaign</h1>
+                    <p class="text-sm text-slate-500" id="detailCampDate">Dibuat pada: -</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                <!-- Kiri: Template -->
+                <div class="xl:col-span-1 space-y-4">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h2 class="font-bold text-slate-700 mb-3"><i class="fa-regular fa-message mr-2 text-teal-600"></i> Pesan Campaign</h2>
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            <span class="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded text-[10px] font-mono">{id}</span>
+                            <span class="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded text-[10px] font-mono">{sapaan}</span>
+                            <span class="bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded text-[10px] font-mono">{nama}</span>
+                        </div>
+                        <textarea id="campTemplateInput" rows="8" class="w-full border-slate-300 border rounded-lg p-3 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition" placeholder="Ketik template khusus untuk campaign ini..."></textarea>
+                        <button onclick="saveCampTemplate()" id="btnSaveTemplate" class="mt-3 w-full bg-slate-800 hover:bg-slate-700 text-white font-medium py-2 rounded-lg transition text-sm">Simpan Pesan</button>
+                    </div>
+                </div>
+
+                <!-- Kanan: Tabel Audiens Campaign -->
+                <div class="xl:col-span-3">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full min-h-[500px]">
+                        <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
+                            <h2 class="font-bold text-slate-700"><i class="fa-solid fa-users mr-2 text-teal-600"></i> Target Audiens</h2>
+                            <button onclick="openSelectDonorModal()" class="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 text-sm rounded-lg transition flex items-center shadow-sm">
+                                <i class="fa-solid fa-user-plus mr-2"></i> Pilih Donatur
+                            </button>
+                        </div>
+                        
+                        <!-- Toolbar Filter Campaign -->
+                        <div class="p-3 border-b border-slate-100 flex flex-col md:flex-row gap-2 bg-white">
+                            <input type="text" id="searchCampDonor" class="bg-slate-50 border border-slate-300 text-sm rounded focus:ring-teal-500 p-2 outline-none flex-grow" placeholder="Cari nama/WA di campaign ini...">
+                            <select id="filterCampRespon" class="bg-slate-50 border border-slate-300 text-sm rounded focus:ring-teal-500 p-2 outline-none w-full md:w-40">
+                                <!-- Dinamis -->
+                            </select>
+                        </div>
+
+                        <!-- Tabel -->
+                        <div class="overflow-x-auto table-container flex-grow">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider">
+                                        <th class="p-3 font-semibold border-b">Nama & ID</th>
+                                        <th class="p-3 font-semibold border-b text-center">Status</th>
+                                        <th class="p-3 font-semibold border-b text-center min-w-[130px]">Kategori Respon</th>
+                                        <th class="p-3 font-semibold border-b min-w-[180px]">Isi Balasan</th>
+                                        <th class="p-3 font-semibold border-b text-center">Kirim</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="campDonorTableBody" class="text-sm divide-y divide-slate-100">
+                                    <!-- Dinamis -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-3 bg-slate-50 border-t border-slate-100 text-xs text-slate-500 font-medium" id="totalCampAudience">Total: 0 Audiens</div>
+                    </div>
                 </div>
             </div>
         </div>
         
     </div>
 
-    <!-- Modal / Pop-up Settings -->
-    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all scale-100">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h2 class="text-lg font-bold flex items-center text-slate-700">
-                    <i class="fa-brands fa-google mr-2 text-blue-500"></i> Koneksi Spreadsheet
-                </h2>
-                <button id="closeSettingsBtn" class="text-slate-400 hover:text-slate-700 transition bg-slate-200 hover:bg-slate-300 w-8 h-8 rounded-full flex items-center justify-center">
-                    <i class="fa-solid fa-xmark"></i>
+    <!-- MODAL: Pilih Donatur untuk Campaign -->
+    <div id="selectDonorModal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 class="text-lg font-bold text-slate-700"><i class="fa-solid fa-list-check mr-2 text-teal-600"></i> Masukkan Donatur ke Campaign</h2>
+                <button onclick="closeSelectDonorModal()" class="text-slate-400 hover:text-slate-700 w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="p-3 bg-white border-b border-slate-100 flex gap-3 items-center">
+                <input type="text" id="searchModalDonor" placeholder="Cari nama dari Master Data..." class="bg-slate-50 border border-slate-300 text-sm rounded p-2 outline-none flex-grow">
+                <label class="flex items-center space-x-2 text-sm font-medium text-slate-700 cursor-pointer bg-slate-100 px-3 py-2 rounded hover:bg-slate-200">
+                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
+                    <span>Pilih Semua filter</span>
+                </label>
+            </div>
+
+            <div class="overflow-y-auto flex-grow p-4 bg-slate-50 table-container">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="modalDonorList">
+                    <!-- List checkbox JS -->
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-white flex justify-between items-center">
+                <span class="text-sm font-bold text-teal-600" id="selectedCountText">0 Terpilih</span>
+                <button onclick="syncCampaignDonors()" id="btnSyncDonors" class="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-6 rounded-lg transition shadow-md">
+                    Simpan Perubahan
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Pengaturan URL -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 class="font-bold flex items-center text-slate-700"><i class="fa-brands fa-google mr-2 text-blue-500"></i> Koneksi Database</h2>
+                <button id="closeSettingsBtn" class="text-slate-400 hover:bg-slate-200 w-8 h-8 rounded-full"><i class="fa-solid fa-xmark"></i></button>
+            </div>
             <div class="p-6 space-y-4">
-                <div class="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg border border-blue-100 flex">
-                    <i class="fa-solid fa-circle-info mt-0.5 mr-2"></i>
-                    <span>Tautkan aplikasi ini ke Google Sheets Anda agar data tersimpan otomatis.</span>
-                </div>
                 <div>
                     <label class="text-xs font-bold text-slate-600 block mb-1">1. URL Web App (Script GAS):</label>
-                    <input type="url" id="gasUrlInput" class="w-full border-slate-300 border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="https://script.google.com/macros/s/...">
+                    <input type="url" id="gasUrlInput" class="w-full border-slate-300 border rounded-lg p-2.5 text-sm outline-none" placeholder="https://script.google.com/macros/s/...">
                 </div>
                 <div>
                     <label class="text-xs font-bold text-slate-600 block mb-1">2. Link Google Sheets (Database):</label>
-                    <input type="text" id="sheetUrlInput" class="w-full border-slate-300 border rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition" placeholder="https://docs.google.com/spreadsheets/d/...">
+                    <input type="text" id="sheetUrlInput" class="w-full border-slate-300 border rounded-lg p-2.5 text-sm outline-none" placeholder="https://docs.google.com/spreadsheets/d/...">
                 </div>
             </div>
             <div class="p-5 bg-slate-50 border-t border-slate-100 flex justify-end">
-                <button id="saveGasUrlBtn" class="w-full bg-blue-600 hover:bg-blue-700 shadow-md text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i class="fa-solid fa-link mr-2"></i> Simpan & Hubungkan
-                </button>
+                <button id="saveGasUrlBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition"><i class="fa-solid fa-link mr-2"></i> Hubungkan</button>
             </div>
         </div>
     </div>
@@ -218,673 +267,502 @@
     <!-- Toast Notification Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
 
-    <!-- Application Logic (Google Script Integration) -->
     <script>
-        // State Variables
-        let donorsList = [];
-        let messageTemplate = "";
-        let responOptions = []; 
+        // --- STATE MANAJEMEN ---
+        let state = {
+            donors: [],          // Master Donatur
+            campaigns: [],       // Daftar Campaign
+            details: [],         // Hubungan Campaign <-> Donatur (Respon, Status)
+            options: [],         // Opsi Dropdown Respon
+            currentView: 'campaigns',
+            activeCampId: null,
+            modalSelectedIds: new Set()
+        };
+
         let gasUrl = localStorage.getItem('crm_gas_url') || "";
         let sheetId = localStorage.getItem('crm_sheet_id') || "";
 
-        // --- Fitur Halaman, Filter & Sort ---
-        let filteredDonors = [];
-        let currentPage = 1;
-        let itemsPerPage = 10;
-        let sortCol = 'created_at';
-        let sortAsc = false;
-
-        // DOM Elements
-        const connectionStatus = document.getElementById('connectionStatus');
-        const statusIcon = document.getElementById('statusIcon');
-        const gasUrlInput = document.getElementById('gasUrlInput');
-        const sheetUrlInput = document.getElementById('sheetUrlInput');
-        const saveGasUrlBtn = document.getElementById('saveGasUrlBtn');
-        const templateInput = document.getElementById('templateInput');
-        const saveTemplateBtn = document.getElementById('saveTemplateBtn');
-        const importInput = document.getElementById('importInput');
-        const importBtn = document.getElementById('importBtn');
-        const donorsTableBody = document.getElementById('donorsTableBody');
-        const totalDonatur = document.getElementById('totalDonatur');
-        const clearAllBtn = document.getElementById('clearAllBtn');
-        const toastContainer = document.getElementById('toastContainer');
+        // --- ELEMENTS ---
+        const connStatus = document.getElementById('connectionStatus');
+        const statIcon = document.getElementById('statusIcon');
         
-        // Modal Elements
-        const settingsModal = document.getElementById('settingsModal');
-        const openSettingsBtn = document.getElementById('openSettingsBtn');
-        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-        const statusBadge = document.getElementById('statusBadge');
-
-        // --- Modal Logic ---
-        function openModal() {
-            settingsModal.classList.remove('hidden');
-        }
-        function closeModal() {
-            settingsModal.classList.add('hidden');
-        }
-        openSettingsBtn.addEventListener('click', openModal);
-        statusBadge.addEventListener('click', openModal); // Bisa buka dari tulisan status juga
-        closeSettingsBtn.addEventListener('click', closeModal);
-        // Tutup modal kalau klik area luar modal
-        settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal) closeModal();
-        });
-
-        // --- Utility: Toast Notifications ---
-        function showToast(message, type = 'success') {
+        // --- TOAST UI ---
+        function showToast(msg, type = 'success') {
             const toast = document.createElement('div');
-            const icon = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500 text-lg"></i>' : 
-                         (type === 'error' ? '<i class="fa-solid fa-circle-exclamation text-red-500 text-lg"></i>' : 
-                         '<i class="fa-solid fa-info-circle text-blue-500 text-lg"></i>');
-            
-            toast.className = `toast-enter flex items-center bg-white shadow-lg rounded-lg border-l-4 p-4 min-w-[250px] ${
-                type === 'success' ? 'border-green-500' : (type === 'error' ? 'border-red-500' : 'border-blue-500')
-            }`;
-            
-            toast.innerHTML = `
-                <div class="mr-3">${icon}</div>
-                <div class="flex-grow text-sm font-medium text-slate-700">${message}</div>
-            `;
-            
-            toastContainer.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.replace('toast-enter', 'toast-exit');
-                setTimeout(() => toast.remove(), 300);
-            }, 5000); 
+            const icon = type === 'success' ? '<i class="fa-solid fa-check-circle text-green-500"></i>' : '<i class="fa-solid fa-circle-exclamation text-red-500"></i>';
+            toast.className = `toast-enter flex items-center bg-white shadow-lg rounded border-l-4 p-4 ${type === 'success' ? 'border-green-500' : 'border-red-500'}`;
+            toast.innerHTML = `<div class="mr-3 text-lg">${icon}</div><div class="text-sm font-medium">${msg}</div>`;
+            document.getElementById('toastContainer').appendChild(toast);
+            setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); }, 4000); 
         }
 
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
-        }
+        function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
+        function escapeHTML(str) { return String(str||'').replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t])); }
 
-        // --- Core Fetch Logic to GAS with Auto-Retry ---
+        // --- FETCH LOGIC ---
         async function fetchGAS(action, payload = {}, retries = 1) {
-            if (!gasUrl) throw new Error("URL_MISSING");
-            if (!sheetId) throw new Error("SHEET_ID_MISSING");
-            
+            if (!gasUrl || !sheetId) throw new Error("URL_MISSING");
             payload.sheet_id = sheetId;
-
             try {
-                const response = await fetch(gasUrl, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'text/plain;charset=utf-8' 
-                    },
-                    body: JSON.stringify({ action, payload }),
-                    redirect: 'follow'
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP_ERROR_${response.status}`);
-                }
-
-                const result = await response.json();
-                
-                if (result.status === 'error') {
-                    throw new Error(`GAS_ERROR: ${result.message}`);
-                }
-                
-                return result.data;
+                const res = await fetch(gasUrl, { method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({ action, payload }) });
+                if (!res.ok) throw new Error(`HTTP_${res.status}`);
+                const data = await res.json();
+                if (data.status === 'error') throw new Error(`GAS: ${data.message}`);
+                return data.data || data;
             } catch (error) {
-                console.warn(`Kesalahan fetch terdeteksi. Sisa percobaan (retry): ${retries}`);
                 if (retries > 0) {
-                    await new Promise(res => setTimeout(res, 1500));
+                    await new Promise(r => setTimeout(r, 1500));
                     return fetchGAS(action, payload, retries - 1);
                 }
-                console.error("Fetch Error Detail:", error);
                 throw error;
             }
         }
 
-        // --- Init & Load Data ---
+        // --- LOAD DATA AWAL ---
         async function loadData() {
-            if (!gasUrl || !sheetId) {
-                connectionStatus.innerText = "Belum Terhubung";
-                statusIcon.className = "fa-solid fa-triangle-exclamation text-yellow-300";
-                // Otomatis buka modal kalau belum ada setting
-                setTimeout(openModal, 500); 
-                return;
-            }
-            
-            gasUrlInput.value = gasUrl;
-            sheetUrlInput.value = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-            
-            connectionStatus.innerText = "Memuat data...";
-            statusIcon.className = "fa-solid fa-spinner fa-spin text-teal-300";
+            if (!gasUrl || !sheetId) return setTimeout(() => document.getElementById('settingsModal').classList.remove('hidden'), 500);
+            document.getElementById('gasUrlInput').value = gasUrl;
+            document.getElementById('sheetUrlInput').value = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+            connStatus.innerText = "Memuat..."; statIcon.className = "fa-solid fa-spinner fa-spin text-teal-300";
             
             try {
-                const data = await fetchGAS('getDonors');
-                donorsList = data.donors || [];
-                messageTemplate = data.template || "";
-                responOptions = data.responOptions || ["Menunggu", "Positif", "Sudah Transfer", "Menolak", "Nomor Tidak Valid"];
-                templateInput.value = messageTemplate;
+                const res = await fetchGAS('getAppData');
+                state.donors = res.donors || [];
+                state.campaigns = res.campaigns || [];
+                state.details = res.campaignDetails || [];
+                state.options = res.responOptions || ["Menunggu", "Positif", "Sudah Transfer", "Menolak", "Nomor Tidak Valid"];
                 
-                connectionStatus.innerText = "Terhubung (Sheet)";
-                statusIcon.className = "fa-solid fa-check-circle text-teal-300";
+                connStatus.innerText = "Terhubung"; statIcon.className = "fa-solid fa-check-circle text-teal-300";
                 
-                updateFilterResponDropdown();
-                updateTable(); 
-            } catch (error) {
-                connectionStatus.innerText = "Gagal Konek";
-                statusIcon.className = "fa-solid fa-xmark-circle text-red-300";
-                
-                let userFriendlyError = "Gagal mengambil data.";
-                let errorMessageStr = String(error.message);
+                renderMasterTable();
+                renderCampaignList();
+                if(state.activeCampId) renderCampaignDetail(state.activeCampId);
 
-                if (errorMessageStr.includes("getSheetByName") || errorMessageStr.includes("getActiveSpreadsheet")) {
-                    userFriendlyError = `<b>🚨 Script GAS Kedaluwarsa / Belum Diperbarui!</b><br>Sistem masih membaca versi script lama yang rusak. <br><br><b>SOLUSI:</b><br>1. Buka kembali editor Code.gs Anda<br>2. Salin KESELURUHAN kode backend baru dan paste ke sana.<br>3. Klik 'Terapkan (Deploy)' > 'Kelola Deployment'<br>4. Edit (ikon pensil) > Ubah versi ke <b>'Versi Baru'</b><br>5. Klik 'Terapkan'.`;
-                } else if (errorMessageStr.includes("Failed to fetch") || errorMessageStr.includes("NetworkError")) {
-                    userFriendlyError = `<b>🚨 Gagal menghubungi Server! (Failed to fetch)</b><br><br><b>PENYEBAB:</b><br>1. URL Web App salah (ada spasi atau kurang lengkap).<br>2. Saat Deploy, akses tidak diatur ke <b>"Siapa Saja (Anyone)"</b>.<br>3. Terjadi blokir CORS di browser Anda.`;
-                } else if (errorMessageStr.includes("SHEET_ID_MISSING")) {
-                    userFriendlyError = `Link Spreadsheet belum diisi dengan benar.`;
-                } else {
-                    userFriendlyError = `Terjadi kesalahan saat koneksi: <br><span class="text-xs text-red-400">${errorMessageStr}</span>`;
-                }
-
-                showToast("Koneksi gagal. Lihat tabel untuk solusi detail.", "error");
-                donorsTableBody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-red-600 bg-red-50 border border-red-200 rounded-lg">${userFriendlyError}</td></tr>`;
+            } catch (err) {
+                connStatus.innerText = "Error"; statIcon.className = "fa-solid fa-xmark-circle text-red-300";
+                showToast("Gagal memuat data. Cek pengaturan URL.", "error");
             }
         }
 
-        // --- Save Google Script URL & Sheet ID ---
-        saveGasUrlBtn.addEventListener('click', async () => {
-            const url = gasUrlInput.value.trim().replace(/(\r\n|\n|\r)/gm, "");
-            let sheetLink = sheetUrlInput.value.trim().replace(/(\r\n|\n|\r)/gm, "");
+        // --- NAVIGATION / VIEWS ---
+        function switchView(view) {
+            state.currentView = view;
+            document.getElementById('view-master').classList.add('hidden');
+            document.getElementById('view-campaigns').classList.add('hidden');
+            document.getElementById('view-campaign-detail').classList.add('hidden');
             
-            let extractedId = "";
-            if (sheetLink.includes('/d/')) {
-                extractedId = sheetLink.split('/d/')[1].split('/')[0];
-            } else if (sheetLink.length > 25 && !sheetLink.includes('http')) {
-                extractedId = sheetLink;
-            }
-            
-            if(!url.startsWith('https://script.google.com/')) {
-                showToast("URL Web App salah! Harus berawalan https://script.google.com/...", "error");
-                return;
-            }
-            if(!extractedId) {
-                showToast("Link Google Sheets tidak valid.", "error");
-                return;
-            }
+            document.getElementById('tab-campaigns').className = 'tab-inactive py-4 px-1 transition duration-200 flex items-center outline-none';
+            document.getElementById('tab-master').className = 'tab-inactive py-4 px-1 transition duration-200 flex items-center outline-none';
 
-            gasUrl = url;
-            sheetId = extractedId;
-            localStorage.setItem('crm_gas_url', url);
-            localStorage.setItem('crm_sheet_id', sheetId);
+            if(view === 'master') {
+                document.getElementById('view-master').classList.remove('hidden');
+                document.getElementById('tab-master').className = 'tab-active py-4 px-1 transition duration-200 flex items-center outline-none';
+                renderMasterTable();
+            } else if (view === 'campaigns') {
+                document.getElementById('view-campaigns').classList.remove('hidden');
+                document.getElementById('tab-campaigns').className = 'tab-active py-4 px-1 transition duration-200 flex items-center outline-none';
+                renderCampaignList();
+            } else if (view === 'campaign-detail') {
+                document.getElementById('view-campaign-detail').classList.remove('hidden');
+                document.getElementById('tab-campaigns').className = 'tab-active py-4 px-1 transition duration-200 flex items-center outline-none';
+            }
+        }
+
+        // ================= LOGIKA MASTER DONATUR =================
+        function renderMasterTable() {
+            const search = document.getElementById('searchMaster').value.toLowerCase();
+            const tbody = document.getElementById('masterTableBody');
             
-            // UI Update: Disable button while loading
-            const originalBtnHTML = saveGasUrlBtn.innerHTML;
-            saveGasUrlBtn.disabled = true;
-            saveGasUrlBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menghubungkan...';
+            const filtered = state.donors.filter(d => 
+                String(d.nama).toLowerCase().includes(search) || String(d.whatsapp).includes(search) || String(d.id_donatur).toLowerCase().includes(search)
+            );
+            
+            document.getElementById('totalMaster').innerText = `Total: ${filtered.length}`;
+            if(filtered.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada donatur.</td></tr>`;
+            
+            let html = '';
+            filtered.forEach(d => {
+                
+                // --- ALGORITMA BARU: Kalkulasi Aktivitas Terakhir dari Detail Campaign ---
+                
+                // 1. Kumpulkan semua rekaman/keterlibatan donatur ini di seluruh campaign
+                const historyInCampaigns = state.details.filter(det => det.id_doc === d.id_doc);
+                
+                let lastActivityHtml = `<span class="text-xs text-slate-400 italic">Belum ada aktivitas</span>`;
+                
+                if (historyInCampaigns.length > 0) {
+                    // 2. Gabungkan data detail dengan data tanggal Campaign untuk bisa diurutkan
+                    const historyWithDates = historyInCampaigns.map(det => {
+                        const campData = state.campaigns.find(c => c.camp_id === det.camp_id);
+                        return {
+                            ...det,
+                            created_at_camp: campData ? campData.created_at : 0 // Angka timestamp pembuatan campaign
+                        };
+                    });
+                    
+                    // 3. Urutkan berdasarkan Campaign yang paling baru (descending)
+                    historyWithDates.sort((a, b) => b.created_at_camp - a.created_at_camp);
+                    
+                    // 4. Ambil catatan yang paling atas (paling baru)
+                    const latestRecord = historyWithDates[0];
+                    
+                    // 5. Susun tampilan HTML untuk 3 kolom tambahan (dikompres jadi 1 kolom visual agar rapi)
+                    let tglKirimText = latestRecord.last_sent ? `<i class="fa-regular fa-calendar-check text-green-500 mr-1"></i> ${escapeHTML(latestRecord.last_sent.split(' ')[0])}` : `<i class="fa-regular fa-clock text-slate-400 mr-1"></i> Blm Kirim`;
+                    
+                    let responText = latestRecord.respon ? `<span class="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded font-semibold ml-1">${escapeHTML(latestRecord.respon)}</span>` : '';
+                    
+                    let balasanText = latestRecord.balasan ? `<div class="text-xs text-slate-500 truncate max-w-[200px] mt-1" title="${escapeHTML(latestRecord.balasan)}">💬 "${escapeHTML(latestRecord.balasan)}"</div>` : '';
+                    
+                    lastActivityHtml = `
+                        <div class="flex flex-col justify-center">
+                            <div class="text-xs text-slate-700 flex items-center">
+                                ${tglKirimText} ${responText}
+                            </div>
+                            ${balasanText}
+                        </div>
+                    `;
+                }
+                
+                html += `<tr class="hover:bg-slate-50">
+                    <td class="p-3 font-medium text-slate-700">${escapeHTML(d.id_donatur)}</td>
+                    <td class="p-3"><div class="font-bold text-slate-800">${escapeHTML(d.nama)}</div><div class="text-xs text-slate-500">${escapeHTML(d.sapaan)}</div></td>
+                    <td class="p-3 font-mono text-xs">${escapeHTML(d.whatsapp)}</td>
+                    <td class="p-3">${lastActivityHtml}</td>
+                    <td class="p-3 text-center"><button onclick="deleteMasterDonor('${d.id_doc}')" class="text-red-400 hover:text-red-600" title="Hapus Donatur"><i class="fa-solid fa-trash-can"></i></button></td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        document.getElementById('searchMaster').addEventListener('input', renderMasterTable);
+
+        document.getElementById('importBtn').addEventListener('click', async () => {
+            const text = document.getElementById('importInput').value.trim();
+            if (!text) return showToast("Masukkan data dulu", "error");
+            
+            const btn = document.getElementById('importBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Memproses...';
+            
+            const newDonors = [];
+            text.split('\n').forEach(line => {
+                let p = null;
+                if (line.includes('\t')) { const c = line.split('\t'); if (c.length>=4) p = {id:c[0], sapaan:c[1], nama:c[2], wa:c[3]}; } 
+                else if (line.includes(',')) { const c = line.split(','); if (c.length>=4) p = {id:c[0], sapaan:c[1], nama:c[2], wa:c[3]}; } 
+                else {
+                    const m = line.match(/^(.*?)\s+(.*?)\s+(.*?)\s+(\d+)$/);
+                    if (m) { const pts = line.substring(0, line.lastIndexOf(m[4])).trim().split(' '); if(pts.length>=3) p = {id: pts.slice(0,-2).join(' '), sapaan: pts[pts.length-2], nama: pts[pts.length-1], wa: m[4]}; }
+                }
+                if (p) {
+                    let w = p.wa.replace(/\D/g, ''); if(w.startsWith('0')) w='62'+w.substring(1);
+                    newDonors.push({ id_doc: generateId(), id_donatur: p.id.trim(), sapaan: p.sapaan.trim(), nama: p.nama.trim(), whatsapp: w, created_at: new Date().toLocaleString('id-ID') });
+                }
+            });
+
+            if (newDonors.length > 0) {
+                state.donors.push(...newDonors); renderMasterTable();
+                try { await fetchGAS('addDonors', { donors: newDonors }); showToast(`Import ${newDonors.length} donatur sukses.`); } 
+                catch(e) { showToast("Gagal simpan ke Sheet", "error"); }
+            } else { showToast("Format salah, 0 diproses", "error"); }
+            
+            btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Tambahkan ke Database';
+            document.getElementById('importInput').value = '';
+        });
+
+        async function deleteMasterDonor(idDoc) {
+            state.donors = state.donors.filter(d => d.id_doc !== idDoc); renderMasterTable();
+            try { await fetchGAS('deleteDonor', { id_doc: idDoc }); } catch(e){}
+        }
+
+        // ================= LOGIKA CAMPAIGN =================
+        function renderCampaignList() {
+            const grid = document.getElementById('campaignGrid');
+            if(state.campaigns.length === 0) return grid.innerHTML = `<div class="col-span-full p-10 text-center text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">Belum ada campaign. Buat di atas.</div>`;
+            
+            let html = '';
+            // Urutkan terbaru
+            const sorted = [...state.campaigns].sort((a,b) => b.camp_id.localeCompare(a.camp_id));
+            
+            sorted.forEach(c => {
+                // Hitung statistik audiens (dari detail)
+                const audiens = state.details.filter(d => d.camp_id === c.camp_id);
+                const terkirim = audiens.filter(d => d.last_sent).length;
+                
+                html += `
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col justify-between" onclick="openCampaign('${c.camp_id}')">
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800 mb-1">${escapeHTML(c.nama_campaign)}</h3>
+                        <div class="text-xs text-slate-500 mb-4"><i class="fa-regular fa-calendar mr-1"></i> ${escapeHTML(c.tanggal)}</div>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 pt-3 border-t border-slate-100">
+                        <div class="text-sm font-medium text-teal-700"><i class="fa-solid fa-users mr-1"></i> ${audiens.length} Audiens</div>
+                        <div class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">${terkirim} Terkirim</div>
+                    </div>
+                </div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        async function createCampaign() {
+            const inp = document.getElementById('newCampName');
+            const name = inp.value.trim();
+            if(!name) return showToast("Nama campaign wajib diisi", "error");
+            
+            const btn = document.getElementById('btnCreateCamp');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>'; btn.disabled = true;
+
+            const camp = { camp_id: generateId(), nama_campaign: name, tanggal: new Date().toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}), template: "", created_at: Date.now() };
+            state.campaigns.push(camp);
+            renderCampaignList();
+            
+            try {
+                await fetchGAS('addCampaign', { campaign: camp });
+                showToast("Campaign berhasil dibuat!"); inp.value = '';
+                openCampaign(camp.camp_id); // Langsung buka
+            } catch(e) { showToast("Gagal buat campaign", "error"); }
+            btn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Buat'; btn.disabled = false;
+        }
+
+        function openCampaign(campId) {
+            state.activeCampId = campId;
+            switchView('campaign-detail');
+            renderCampaignDetail();
+        }
+
+        // ================= LOGIKA INSIDE CAMPAIGN =================
+        function renderCampaignDetail() {
+            const camp = state.campaigns.find(c => c.camp_id === state.activeCampId);
+            if(!camp) return switchView('campaigns');
+            
+            document.getElementById('detailCampName').innerText = camp.nama_campaign;
+            document.getElementById('detailCampDate').innerText = `Dibuat pada: ${camp.tanggal}`;
+            document.getElementById('campTemplateInput').value = camp.template || "";
+            
+            // Build dropdown opsi respon untuk filter
+            let htmlOpt = `<option value="all">Semua Kategori</option><option value="empty">Belum Ada Respon</option>`;
+            state.options.forEach(o => htmlOpt += `<option value="${escapeHTML(o)}">${escapeHTML(o)}</option>`);
+            document.getElementById('filterCampRespon').innerHTML = htmlOpt;
+
+            renderCampaignAudience();
+        }
+
+        function renderCampaignAudience() {
+            const campId = state.activeCampId;
+            const tbody = document.getElementById('campDonorTableBody');
+            const search = document.getElementById('searchCampDonor').value.toLowerCase();
+            const filterRsp = document.getElementById('filterCampRespon').value;
+
+            // 1. Ambil relasi detail untuk campaign ini
+            const myDetails = state.details.filter(d => d.camp_id === campId);
+            document.getElementById('totalCampAudience').innerText = `Total: ${myDetails.length} Audiens`;
+
+            // 2. Gabungkan dengan data global (Master) untuk dapat Nama & WA
+            let merged = myDetails.map(det => {
+                const globalData = state.donors.find(g => g.id_doc === det.id_doc) || { nama: 'Terhapus', whatsapp: '-', sapaan: '-', id_donatur: '-' };
+                return { ...det, ...globalData };
+            });
+
+            // 3. Filter berdasarkan search & respon
+            merged = merged.filter(m => {
+                const matchSearch = String(m.nama).toLowerCase().includes(search) || String(m.whatsapp).includes(search);
+                let matchRespon = true;
+                if(filterRsp === 'empty') matchRespon = !m.respon;
+                else if(filterRsp !== 'all') matchRespon = m.respon === filterRsp;
+                return matchSearch && matchRespon;
+            });
+
+            if(merged.length === 0) return tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Tidak ada audiens yang cocok. Tambahkan donatur ke campaign ini.</td></tr>`;
+
+            let html = '';
+            // Generate dropdown HTML sekali saja
+            let dropOptions = `<option value="">- Pilih -</option>`;
+            state.options.forEach(o => dropOptions += `<option value="${escapeHTML(o)}">${escapeHTML(o)}</option>`);
+
+            merged.forEach(m => {
+                const stsHtml = m.last_sent ? `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>Terkirim</span>` 
+                                            : `<span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full"><i class="fa-regular fa-clock mr-1"></i>Belum</span>`;
+                
+                // Set selected dropOptions
+                const rowDrop = dropOptions.replace(`value="${escapeHTML(m.respon)}"`, `value="${escapeHTML(m.respon)}" selected`);
+
+                html += `<tr class="hover:bg-slate-50 border-b border-slate-50">
+                    <td class="p-3"><div class="font-bold text-slate-700">${escapeHTML(m.nama)}</div><div class="text-xs text-slate-400">${escapeHTML(m.id_donatur)} | ${escapeHTML(m.whatsapp)}</div></td>
+                    <td class="p-3 text-center">${stsHtml}</td>
+                    <td class="p-3 text-center">
+                        <select onchange="updateCampRecord('${m.id_doc}', 'respon', this.value)" class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full bg-white shadow-sm">${rowDrop}</select>
+                    </td>
+                    <td class="p-3">
+                        <input type="text" value="${escapeHTML(m.balasan || '')}" onchange="updateCampRecord('${m.id_doc}', 'balasan', this.value)" placeholder="Ketik/paste isi balasan..." class="text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-teal-500 w-full shadow-sm">
+                    </td>
+                    <td class="p-3 text-center">
+                        <button onclick="sendCampWA('${m.id_doc}')" class="bg-green-500 hover:bg-green-600 text-white w-8 h-8 rounded shadow flex items-center justify-center transition" title="Kirim WA">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        document.getElementById('searchCampDonor').addEventListener('input', renderCampaignAudience);
+        document.getElementById('filterCampRespon').addEventListener('change', renderCampaignAudience);
+
+        async function saveCampTemplate() {
+            const temp = document.getElementById('campTemplateInput').value.trim();
+            const camp = state.campaigns.find(c => c.camp_id === state.activeCampId);
+            camp.template = temp; // Optimistic
+            
+            const btn = document.getElementById('btnSaveTemplate');
+            btn.innerHTML = 'Menyimpan...'; btn.disabled = true;
+            try {
+                await fetchGAS('updateCampaignTemplate', { camp_id: state.activeCampId, template: temp });
+                showToast("Template campaign disimpan!");
+            } catch(e) { showToast("Gagal simpan template", "error"); }
+            btn.innerHTML = 'Simpan Pesan'; btn.disabled = false;
+        }
+
+        // --- UPDATE DATA DI DALAM CAMPAIGN (RESPON, BALASAN, STATUS) ---
+        async function updateCampRecord(idDoc, field, value) {
+            const detailIdx = state.details.findIndex(d => d.camp_id === state.activeCampId && d.id_doc === idDoc);
+            if(detailIdx === -1) return;
+            
+            // Optimistic update
+            state.details[detailIdx][field] = value;
+            
+            const payload = { camp_id: state.activeCampId, id_doc: idDoc };
+            payload[field] = value;
+
+            try {
+                // Tidak perlu await jika ingin terasa instan di UI, GAS jalan di background
+                fetchGAS('updateCampaignRecord', payload);
+                if(field === 'balasan') showToast("Balasan tersimpan otomatis");
+            } catch(e) { console.warn(e); }
+        }
+
+        function sendCampWA(idDoc) {
+            const camp = state.campaigns.find(c => c.camp_id === state.activeCampId);
+            const globalDonor = state.donors.find(g => g.id_doc === idDoc);
+            
+            if(!camp.template) { showToast("Template kosong!", "error"); document.getElementById('campTemplateInput').focus(); return; }
+            
+            let msg = camp.template.replace(/{id}/g, globalDonor.id_donatur).replace(/{sapaan}/g, globalDonor.sapaan).replace(/{nama}/g, globalDonor.nama);
+            window.open(`https://wa.me/${globalDonor.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
+            
+            updateCampRecord(idDoc, 'last_sent', new Date().toLocaleString('id-ID'));
+            renderCampaignAudience();
+        }
+
+        // ================= MODAL PEMILIHAN DONATUR KE CAMPAIGN =================
+        function openSelectDonorModal() {
+            state.modalSelectedIds.clear();
+            // Pre-fill dg yang sudah ada di campaign ini
+            state.details.filter(d => d.camp_id === state.activeCampId).forEach(d => state.modalSelectedIds.add(d.id_doc));
+            
+            document.getElementById('searchModalDonor').value = '';
+            document.getElementById('selectAllCheckbox').checked = false;
+            document.getElementById('selectDonorModal').classList.remove('hidden');
+            renderModalDonorList();
+        }
+
+        function closeSelectDonorModal() {
+            document.getElementById('selectDonorModal').classList.add('hidden');
+        }
+
+        function renderModalDonorList() {
+            const search = document.getElementById('searchModalDonor').value.toLowerCase();
+            const listContainer = document.getElementById('modalDonorList');
+            
+            const filtered = state.donors.filter(d => String(d.nama).toLowerCase().includes(search) || String(d.id_donatur).toLowerCase().includes(search));
+            
+            let html = '';
+            filtered.forEach(d => {
+                const isChecked = state.modalSelectedIds.has(d.id_doc) ? 'checked' : '';
+                html += `
+                <label class="flex items-center space-x-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition shadow-sm">
+                    <input type="checkbox" value="${d.id_doc}" onchange="toggleModalDonor(this)" class="modal-cb w-4 h-4 text-teal-600 rounded focus:ring-teal-500" ${isChecked}>
+                    <div class="flex-grow overflow-hidden">
+                        <div class="text-sm font-bold text-slate-700 truncate">${escapeHTML(d.nama)}</div>
+                        <div class="text-xs text-slate-400 truncate">${escapeHTML(d.id_donatur)} | ${escapeHTML(d.whatsapp)}</div>
+                    </div>
+                </label>`;
+            });
+            listContainer.innerHTML = html;
+            updateModalCountText();
+        }
+
+        document.getElementById('searchModalDonor').addEventListener('input', renderModalDonorList);
+
+        window.toggleModalDonor = function(cb) {
+            if(cb.checked) state.modalSelectedIds.add(cb.value); else state.modalSelectedIds.delete(cb.value);
+            updateModalCountText();
+        }
+
+        window.toggleSelectAll = function(cb) {
+            const checkboxes = document.querySelectorAll('.modal-cb');
+            checkboxes.forEach(c => {
+                c.checked = cb.checked;
+                if(cb.checked) state.modalSelectedIds.add(c.value); else state.modalSelectedIds.delete(c.value);
+            });
+            updateModalCountText();
+        }
+
+        function updateModalCountText() {
+            document.getElementById('selectedCountText').innerText = `${state.modalSelectedIds.size} Terpilih`;
+        }
+
+        async function syncCampaignDonors() {
+            const btn = document.getElementById('btnSyncDonors');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; btn.disabled = true;
+
+            const selectedArray = Array.from(state.modalSelectedIds);
+            
+            try {
+                await fetchGAS('syncCampaignDonors', { camp_id: state.activeCampId, donor_ids: selectedArray });
+                
+                // Update local State 'details'
+                // Hapus yg lama untuk campaign ini
+                state.details = state.details.filter(d => d.camp_id !== state.activeCampId);
+                // Masukkan yg baru (tanpa hapus respon lama klo API nya sebenarnya pertahankan, 
+                // tp krn UI kita fetch ulang nanti gpp reload saja biar aman)
+                await loadData(); // Reload agar relasinya bersih sesuai di database
+                
+                showToast("Audiens Campaign diperbarui!");
+                closeSelectDonorModal();
+            } catch (e) {
+                showToast("Gagal menyimpan audiens", "error");
+            }
+            btn.innerHTML = 'Simpan Perubahan'; btn.disabled = false;
+        }
+
+
+        // ================= KONEKSI & PENGATURAN AWAL =================
+        document.getElementById('openSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('hidden'));
+        document.getElementById('statusBadge').addEventListener('click', () => document.getElementById('settingsModal').classList.remove('hidden'));
+        document.getElementById('closeSettingsBtn').addEventListener('click', () => document.getElementById('settingsModal').classList.add('hidden'));
+
+        document.getElementById('saveGasUrlBtn').addEventListener('click', async () => {
+            const url = document.getElementById('gasUrlInput').value.trim().replace(/(\r\n|\n|\r)/gm, "");
+            const sUrl = document.getElementById('sheetUrlInput').value.trim().replace(/(\r\n|\n|\r)/gm, "");
+            let extId = sUrl.includes('/d/') ? sUrl.split('/d/')[1].split('/')[0] : (sUrl.length > 25 && !sUrl.includes('http') ? sUrl : "");
+            
+            if(!url.startsWith('https://script.google.com/')) return showToast("URL Web App salah!", "error");
+            if(!extId) return showToast("Link Sheets tidak valid", "error");
+
+            gasUrl = url; sheetId = extId;
+            localStorage.setItem('crm_gas_url', url); localStorage.setItem('crm_sheet_id', sheetId);
+            
+            const btn = document.getElementById('saveGasUrlBtn');
+            const oBtn = btn.innerHTML; btn.disabled=true; btn.innerHTML='Menghubungkan...';
             
             await loadData();
             
-            // Restore button
-            saveGasUrlBtn.disabled = false;
-            saveGasUrlBtn.innerHTML = originalBtnHTML;
-            if (connectionStatus.innerText.includes("Terhubung")) {
-                showToast("Berhasil tersinkronisasi dengan Spreadsheet!");
-                closeModal(); // Tutup modal jika sukses
-            }
+            btn.disabled=false; btn.innerHTML = oBtn;
+            if(connStatus.innerText === 'Terhubung') document.getElementById('settingsModal').classList.add('hidden');
         });
 
-        // --- Sinkronisasi Menu Filter Respon ---
-        function updateFilterResponDropdown() {
-            const filterRespon = document.getElementById('filterRespon');
-            const currentVal = filterRespon.value;
-            let html = `<option value="all">Semua Respon</option><option value="empty">Belum Ada</option>`;
-            responOptions.forEach(opt => {
-                html += `<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`;
-            });
-            filterRespon.innerHTML = html;
-            filterRespon.value = currentVal; // Kembalikan ke pilihan terakhir pengguna (jika ada)
-        }
-
-        // --- Algoritma Tabel Utama (Filter, Sort, Paginasi, Render) ---
-        function updateTable() {
-            const searchInput = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('filterStatus').value;
-            const responFilter = document.getElementById('filterRespon').value;
-
-            // 1. Proses Filter & Pencarian
-            filteredDonors = donorsList.filter(d => {
-                // Pencarian
-                const matchSearch = (d.nama || "").toLowerCase().includes(searchInput) || 
-                                    (d.id_donatur || "").toLowerCase().includes(searchInput) ||
-                                    (d.whatsapp || "").includes(searchInput) ||
-                                    (d.balasan || "").toLowerCase().includes(searchInput);
-                
-                // Filter Status (Terkirim / Belum)
-                let matchStatus = true;
-                if (statusFilter === 'sent') matchStatus = !!d.last_sent;
-                if (statusFilter === 'unsent') matchStatus = !d.last_sent;
-
-                // Filter Respon
-                let matchRespon = true;
-                if (responFilter === 'empty') matchRespon = !d.respon || d.respon.trim() === "";
-                else if (responFilter !== 'all') matchRespon = d.respon === responFilter;
-
-                return matchSearch && matchStatus && matchRespon;
-            });
-
-            // 2. Proses Pengurutan (Sorting)
-            filteredDonors.sort((a, b) => {
-                let valA = a[sortCol] || "";
-                let valB = b[sortCol] || "";
-                
-                if (sortCol === 'status') {
-                    valA = a.last_sent ? 1 : 0;
-                    valB = b.last_sent ? 1 : 0;
-                } else if (sortCol === 'created_at') {
-                    valA = a.created_at || 0;
-                    valB = b.created_at || 0;
-                } else {
-                    valA = String(valA).toLowerCase();
-                    valB = String(valB).toLowerCase();
-                }
-
-                if (valA < valB) return sortAsc ? -1 : 1;
-                if (valA > valB) return sortAsc ? 1 : -1;
-                return 0;
-            });
-
-            // Perbarui Ikon Pengurutan di Header
-            const headers = ['id_donatur', 'sapaan', 'nama', 'whatsapp', 'status', 'respon', 'balasan'];
-            headers.forEach(h => {
-                const icon = document.getElementById(`sort-${h}`);
-                if(icon) {
-                    if (h === sortCol) {
-                        icon.className = sortAsc ? "fa-solid fa-sort-up text-teal-600 ml-1" : "fa-solid fa-sort-down text-teal-600 ml-1";
-                    } else {
-                        icon.className = "fa-solid fa-sort text-slate-300 ml-1";
-                    }
-                }
-            });
-
-            // Perbarui Angka Total (Kanan Atas)
-            totalDonatur.innerText = `Terfilter: ${filteredDonors.length} / Total: ${donorsList.length}`;
-
-            // 3. Proses Paginasi (Halaman)
-            const totalItems = filteredDonors.length;
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
-            if (currentPage < 1) currentPage = 1;
-
-            const startIdx = (currentPage - 1) * itemsPerPage;
-            const paginatedData = filteredDonors.slice(startIdx, startIdx + parseInt(itemsPerPage));
-
-            // 4. Proses Tampilan HTML (Render)
-            if (paginatedData.length === 0) {
-                donorsTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="8" class="p-12 text-center text-slate-500">
-                            <div class="flex flex-col items-center justify-center">
-                                <div class="bg-slate-100 p-4 rounded-full mb-3">
-                                    <i class="fa-solid fa-magnifying-glass text-3xl text-slate-300"></i>
-                                </div>
-                                <p class="text-base font-medium">Data tidak ditemukan.</p>
-                                <p class="text-sm mt-1 text-slate-400">Coba ubah filter atau kata kunci pencarian Anda.</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            } else {
-                donorsTableBody.innerHTML = '';
-                paginatedData.forEach((donor) => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50 transition duration-150 group";
-                    
-                    let statusHtml = `<span class="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full whitespace-nowrap"><i class="fa-regular fa-clock mr-1"></i>Belum</span>`;
-                    if (donor.last_sent) {
-                        statusHtml = `<span class="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full whitespace-nowrap"><i class="fa-solid fa-check mr-1"></i>Terkirim</span>`;
-                    }
-                    
-                    const currentRespon = donor.respon || "";
-
-                    let optionsHtml = `<option value="" ${currentRespon === '' ? 'selected' : ''}>- Pilih -</option>`;
-                    responOptions.forEach(opt => {
-                        optionsHtml += `<option value="${escapeHTML(opt)}" ${currentRespon === opt ? 'selected' : ''}>${escapeHTML(opt)}</option>`;
-                    });
-
-                    tr.innerHTML = `
-                        <td class="p-4 font-medium text-slate-700 whitespace-nowrap">${escapeHTML(donor.id_donatur)}</td>
-                        <td class="p-4 text-slate-600">${escapeHTML(donor.sapaan)}</td>
-                        <td class="p-4 text-slate-800 font-medium">${escapeHTML(donor.nama)}</td>
-                        <td class="p-4 text-slate-600 font-mono text-sm">${escapeHTML(donor.whatsapp)}</td>
-                        <td class="p-4 text-center">${statusHtml}</td>
-                        <td class="p-4 text-center">
-                            <select onchange="window.updateRespon('${donor.id_doc}', this.value)" class="text-xs border border-slate-300 rounded p-1.5 text-slate-600 focus:ring-teal-500 focus:border-teal-500 outline-none cursor-pointer bg-white w-full max-w-[120px]">
-                                ${optionsHtml}
-                            </select>
-                        </td>
-                        <td class="p-4">
-                            <input type="text" value="${escapeHTML(donor.balasan || '')}" onchange="window.updateBalasan('${donor.id_doc}', this.value)" class="text-xs border border-slate-300 rounded p-1.5 text-slate-700 focus:ring-teal-500 focus:border-teal-500 outline-none w-full min-w-[160px]" placeholder="Paste balasan donatur...">
-                        </td>
-                        <td class="p-4 text-center">
-                            <div class="flex items-center justify-center space-x-2">
-                                <button onclick="window.sendWhatsApp('${donor.id_doc}')" class="bg-green-500 hover:bg-green-600 text-white w-8 h-8 flex items-center justify-center rounded-lg transition shadow-sm" title="Kirim WhatsApp">
-                                    <i class="fa-brands fa-whatsapp text-lg"></i>
-                                </button>
-                                <button onclick="window.deleteDonor('${donor.id_doc}')" class="bg-red-50 text-red-500 hover:bg-red-500 hover:text-white w-8 h-8 flex items-center justify-center rounded-lg transition opacity-0 group-hover:opacity-100" title="Hapus Data">
-                                    <i class="fa-regular fa-trash-can"></i>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    donorsTableBody.appendChild(tr);
-                });
-            }
-
-            renderPagination(totalItems, totalPages);
-        }
-
-        // --- Render Tombol Paginasi Bawah ---
-        function renderPagination(totalItems, totalPages) {
-            const paginationControls = document.getElementById('paginationControls');
-            const paginationInfo = document.getElementById('paginationInfo');
-            
-            if (totalItems === 0) {
-                paginationInfo.innerText = "Menampilkan 0 data";
-                paginationControls.innerHTML = "";
-                return;
-            }
-
-            const startIdx = (currentPage - 1) * itemsPerPage + 1;
-            const endIdx = Math.min(currentPage * itemsPerPage, totalItems);
-            paginationInfo.innerText = `Menampilkan ${startIdx}-${endIdx} dari ${totalItems} data`;
-
-            let html = '';
-            // Tombol Previous
-            html += `<button onclick="window.changePage(${currentPage - 1})" class="w-8 h-8 flex items-center justify-center text-sm border border-slate-300 rounded transition hover:bg-slate-100 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'bg-white'}" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left text-slate-600"></i></button>`;
-            
-            // Informasi Halaman (X / Y)
-            html += `<span class="px-3 h-8 flex items-center justify-center text-sm font-medium text-slate-700 bg-slate-50 border border-slate-300 rounded select-none shadow-sm">${currentPage} / ${totalPages}</span>`;
-
-            // Tombol Next
-            html += `<button onclick="window.changePage(${currentPage + 1})" class="w-8 h-8 flex items-center justify-center text-sm border border-slate-300 rounded transition hover:bg-slate-100 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'bg-white'}" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right text-slate-600"></i></button>`;
-
-            paginationControls.innerHTML = html;
-        }
-
-        // Event Klik Halaman
-        window.changePage = function(newPage) {
-            currentPage = newPage;
-            updateTable();
-        };
-
-        // Event Klik Judul Kolom (Urutkan)
-        window.handleSort = function(col) {
-            if (sortCol === col) {
-                sortAsc = !sortAsc; // Balik arah (Z-A / Besar-Kecil)
-            } else {
-                sortCol = col;
-                sortAsc = true;     // Defaultnya (A-Z / Kecil-Besar)
-            }
-            currentPage = 1; // Kembali ke halaman 1 setelah mengurutkan
-            updateTable();
-        };
-
-        // --- Save Template ---
-        saveTemplateBtn.addEventListener('click', async () => {
-            if (!gasUrl) {
-                openModal();
-                return showToast("Silakan hubungkan ke Google Script dulu", "error");
-            }
-            
-            const newTemplate = templateInput.value.trim();
-            if (!newTemplate) return showToast("Template tidak boleh kosong", "error");
-
-            messageTemplate = newTemplate; 
-            
-            const originalBtn = saveTemplateBtn.innerHTML;
-            saveTemplateBtn.disabled = true;
-            saveTemplateBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Menyimpan...';
-            
-            try {
-                await fetchGAS('saveTemplate', { template: newTemplate });
-                showToast("Template berhasil disimpan ke Sheet!");
-            } catch (error) {
-                showToast("Gagal menyimpan template", "error");
-            } finally {
-                saveTemplateBtn.disabled = false;
-                saveTemplateBtn.innerHTML = originalBtn;
-            }
-        });
-
-        // --- Parse & Import Data ---
-        importBtn.addEventListener('click', async () => {
-            if (!gasUrl) {
-                openModal();
-                return showToast("Silakan hubungkan ke Google Script dulu", "error");
-            }
-            
-            const text = importInput.value.trim();
-            if (!text) return showToast("Silakan masukkan data terlebih dahulu", "error");
-
-            const rows = text.split('\n');
-            let successCount = 0;
-            let errorCount = 0;
-            const newDonors = [];
-
-            const originalBtn = importBtn.innerHTML;
-            importBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Memproses...';
-            importBtn.disabled = true;
-
-            for (let line of rows) {
-                line = line.trim();
-                if (!line) continue;
-
-                let parsed = null;
-                if (line.includes('\t')) {
-                    const cols = line.split('\t');
-                    if (cols.length >= 4) parsed = { id: cols[0], sapaan: cols[1], nama: cols[2], wa: cols[3] };
-                } else if (line.includes(',')) {
-                    const cols = line.split(',');
-                    if (cols.length >= 4) parsed = { id: cols[0], sapaan: cols[1], nama: cols[2], wa: cols[3] };
-                } else {
-                    const match = line.match(/^(.*?)\s+(.*?)\s+(.*?)\s+(\d+)$/);
-                    if (match) {
-                        const waMatch = line.match(/(\d+)$/);
-                        if (waMatch) {
-                            const waStr = waMatch[1];
-                            const restStr = line.substring(0, line.length - waStr.length).trim();
-                            const parts = restStr.split(' ');
-                            if(parts.length >= 3) {
-                                const nama = parts.pop();
-                                const sapaan = parts.pop();
-                                const id = parts.join(' ');
-                                parsed = { id, sapaan, nama, wa: waStr };
-                            }
-                        }
-                    }
-                }
-
-                if (parsed) {
-                    let cleanWa = parsed.wa.replace(/\D/g, '');
-                    if (cleanWa.startsWith('0')) cleanWa = '62' + cleanWa.substring(1);
-
-                    newDonors.push({
-                        id_doc: generateId(),
-                        id_donatur: parsed.id.trim(),
-                        sapaan: parsed.sapaan.trim(),
-                        nama: parsed.nama.trim(),
-                        whatsapp: cleanWa,
-                        last_sent: "",
-                        respon: "",
-                        created_at: Date.now(),
-                        balasan: ""
-                    });
-                    successCount++;
-                } else {
-                    errorCount++;
-                }
-            }
-
-            if (newDonors.length > 0) {
-                donorsList = [...donorsList, ...newDonors];
-                updateTable(); // Update tampilan seketika
-                
-                try {
-                    await fetchGAS('addDonors', { donors: newDonors });
-                    showToast(`Berhasil import ${successCount} data ke Sheet.`);
-                } catch (error) {
-                    showToast("Gagal menyimpan ke Sheet, coba muat ulang (refresh) nanti.", "error");
-                }
-            }
-
-            importBtn.innerHTML = originalBtn;
-            importBtn.disabled = false;
-            importInput.value = '';
-
-            if (errorCount > 0) {
-                showToast(`Gagal membaca ${errorCount} baris. Pastikan format benar.`, 'error');
-            }
-        });
-
-        // --- Action: Update Respon ---
-        window.updateRespon = async (docId, newValue) => {
-            const donorIndex = donorsList.findIndex(d => d.id_doc === docId);
-            if (donorIndex === -1) return;
-            
-            donorsList[donorIndex].respon = newValue;
-
-            try {
-                await fetchGAS('updateRespon', { id_doc: docId, respon: newValue });
-                showToast("Respon berhasil disimpan!");
-            } catch (error) {
-                console.error("Gagal update respon:", error);
-                showToast("Gagal menyimpan respon di server. Pastikan internet stabil.", "error");
-            }
-        };
-
-        // --- Action: Update Balasan ---
-        window.updateBalasan = async (docId, newValue) => {
-            const donorIndex = donorsList.findIndex(d => d.id_doc === docId);
-            if (donorIndex === -1) return;
-            
-            donorsList[donorIndex].balasan = newValue;
-
-            try {
-                await fetchGAS('updateBalasan', { id_doc: docId, balasan: newValue });
-                showToast("Catatan balasan berhasil disimpan!");
-            } catch (error) {
-                console.error("Gagal update balasan:", error);
-                showToast("Gagal menyimpan balasan di server.", "error");
-            }
-        };
-
-        // --- Action: Send WhatsApp ---
-        window.sendWhatsApp = async (docId) => {
-            const donorIndex = donorsList.findIndex(d => d.id_doc === docId);
-            if (donorIndex === -1) return;
-            const donor = donorsList[donorIndex];
-
-            if (!messageTemplate) {
-                showToast("Template pesan belum dibuat!", "error");
-                templateInput.focus();
-                return;
-            }
-
-            let msg = messageTemplate.replace(/{id}/g, donor.id_donatur)
-                                     .replace(/{sapaan}/g, donor.sapaan)
-                                     .replace(/{nama}/g, donor.nama);
-            
-            window.open(`https://wa.me/${donor.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
-
-            const timestamp = new Date().toLocaleString('id-ID');
-            donorsList[donorIndex].last_sent = timestamp;
-            updateTable();
-
-            try {
-                await fetchGAS('updateStatus', { id_doc: docId, last_sent: timestamp });
-            } catch (error) {
-                console.error("Gagal update status di Sheet");
-            }
-        };
-
-        // --- Action: Delete Single Data ---
-        window.deleteDonor = async (docId) => {
-            donorsList = donorsList.filter(d => d.id_doc !== docId);
-            updateTable();
-            showToast("Menghapus data...");
-
-            try {
-                await fetchGAS('deleteDonor', { id_doc: docId });
-            } catch (error) {
-                showToast("Gagal hapus dari Sheet", "error");
-            }
-        };
-
-        // --- Action: Clear All Data ---
-        clearAllBtn.addEventListener('click', async () => {
-            if (donorsList.length === 0) return;
-            
-            const originalText = clearAllBtn.innerHTML;
-            if (clearAllBtn.dataset.confirming === "true") {
-                clearAllBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Menghapus...';
-                clearAllBtn.disabled = true;
-                
-                donorsList = [];
-                updateTable();
-                
-                try {
-                    await fetchGAS('clearAll');
-                    showToast("Semua data berhasil dihapus dari Sheet");
-                } catch (error) {
-                    showToast("Gagal menghapus data dari Sheet", "error");
-                } finally {
-                    clearAllBtn.dataset.confirming = "false";
-                    clearAllBtn.innerHTML = originalText;
-                    clearAllBtn.disabled = false;
-                }
-            } else {
-                clearAllBtn.dataset.confirming = "true";
-                clearAllBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> Klik lagi untuk HAPUS';
-                clearAllBtn.classList.add('text-red-700', 'font-bold');
-                
-                setTimeout(() => {
-                    if (clearAllBtn.dataset.confirming === "true") {
-                        clearAllBtn.dataset.confirming = "false";
-                        clearAllBtn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i> Hapus Semua Data';
-                        clearAllBtn.classList.remove('text-red-700', 'font-bold');
-                    }
-                }, 3000);
-            }
-        });
-
-        // --- Helper function ---
-        function escapeHTML(str) {
-            if (!str) return '';
-            return String(str).replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag])
-            );
-        }
-
-        // Initialize App
+        // PWA Init
         window.onload = () => loadData();
-
-        // --- Event Listener Tambahan untuk Filter & Search ---
-        document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; updateTable(); });
-        document.getElementById('filterStatus').addEventListener('change', () => { currentPage = 1; updateTable(); });
-        document.getElementById('filterRespon').addEventListener('change', () => { currentPage = 1; updateTable(); });
-        document.getElementById('itemsPerPage').addEventListener('change', (e) => { 
-            itemsPerPage = parseInt(e.target.value); 
-            currentPage = 1; 
-            updateTable(); 
-        });
-
-        // --- PWA Service Worker Registration ---
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker berhasil didaftarkan dengan scope: ', registration.scope);
-                    })
-                    .catch(err => {
-                        console.log('ServiceWorker gagal didaftarkan: ', err);
-                    });
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(()=>{}); });
         }
     </script>
 </body>
